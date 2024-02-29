@@ -15,14 +15,16 @@ def extract_book_metadata(book: ebooklib.epub.EpubBook):
     }
 
 
-def extract_structured_content(book: ebooklib.epub.EpubBook):
+def extract_structured_toc(book: ebooklib.epub.EpubBook):
     def process_navpoint_recursive(navpoint):
         result = {}
         result['id'] = navpoint['id']
         result['playorder'] = navpoint['playOrder']
         result['label'] = navpoint.navLabel.text.strip()
-        result['content_path'] = navpoint.content['src']
-        result['content'] = parse_item(book, result['content_path'])
+        content_tuple = navpoint.content['src'].split('#')
+        result['content_path'] = content_tuple[0]
+        result['content_id'] = content_tuple[1] if len(content_tuple)>1 else None
+        #result['content'] = parse_item(book, result['content_path'])
 
         children_navpoints = navpoint.find_all('navPoint')
         if len(children_navpoints) > 0:
@@ -37,7 +39,6 @@ def extract_structured_content(book: ebooklib.epub.EpubBook):
     nav_html = navs[0].content.decode('utf-8')
     nav_soup = BeautifulSoup(nav_html, features="xml")
     navmap = nav_soup.navMap
-    print(navmap.prettify())
 
     table_of_content = []
 
@@ -61,9 +62,9 @@ if __name__ == '__main__':
     EBOOK_PATH = "data/epubs/Sorceleur - L'Integrale - Andrzej Sapkowski.epub"
     book = epub.read_epub(EBOOK_PATH)
 
-    print(json.dumps(extract_structured_content(book), indent=4))
+    print(json.dumps(extract_structured_toc(book), indent=4))
 
-    """
+    """encode
     documents = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
     images = list(book.get_items_of_type(ebooklib.ITEM_IMAGE))
     navigation = list(book.get_items_of_type(ebooklib.ITEM_NAVIGATION))
