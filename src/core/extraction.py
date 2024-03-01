@@ -16,6 +16,7 @@ def extract_book_metadata(book: ebooklib.epub.EpubBook):
 
 
 def extract_structured_toc(book: ebooklib.epub.EpubBook):
+    # depth first toc building
     def process_navpoint_recursive(navpoint):
         result = {}
         result['id'] = navpoint['id']
@@ -45,6 +46,13 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook):
     for child in navmap.children:
         if child.name == 'navPoint':
             table_of_content.append(process_navpoint_recursive(child))
+
+    # breadth-first validation and potential merging
+    def check_for_duplicate_recursive(node: dict):
+        pass
+
+    for part in table_of_content:
+        check_for_duplicate_recursive(part)
 
     return table_of_content
 
