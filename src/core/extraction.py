@@ -1,8 +1,6 @@
 import json
-import os
 import ebooklib
 from ebooklib import epub
-import bs4
 from bs4 import BeautifulSoup
 
 
@@ -16,6 +14,7 @@ def extract_book_metadata(book: ebooklib.epub.EpubBook):
 
 
 def extract_structured_toc(book: ebooklib.epub.EpubBook):
+
     # depth first toc building
     def process_navpoint_recursive(navpoint):
         result = {}
@@ -24,8 +23,9 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook):
         result['label'] = navpoint.navLabel.text.strip()
         content_tuple = navpoint.content['src'].split('#')
         result['content_path'] = content_tuple[0]
-        result['content_id'] = content_tuple[1] if len(content_tuple)>1 else None
-        #result['content'] = parse_item(book, result['content_path'])
+        result['content_id'] = content_tuple[1] if len(
+            content_tuple) > 1 else None
+        # result['content'] = parse_item(book, result['content_path'])
 
         children_navpoints = navpoint.find_all('navPoint')
         if len(children_navpoints) > 0:
@@ -49,34 +49,107 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook):
 
     # breadth-first validation and potential merging
     def check_for_duplicate_recursive(node: dict):
-        pass
+        returned_node = {
+            "id": [node['id']],
+            "playorder": [node['playorder']],
+            "label": [node['label']],
+            "content_path": node['content_path'],
+            "content_id": [node['content_id']],
+            "children": node['children']
+        }
+        if node['children'] == []:
+            return returned_node
+        else:
+            # Merge children that share the same content_path
+            merged_children = []
+            content_paths = set()
+            for child in node['children']:
+                content_path = child['content_path']
+                if content_path not in content_paths:
+                    # new unseen content_path
+                    content_paths.add(content_path)
+                    merged_child = {
+                        'id': [child['id']],
+                        'playorder': [child['playorder']],
+                        'label': [child['label']],
+                        'content_path': content_path,
+                        'content_id': [child['content_id']],
+                        'children': child['children']
+                    }
+                    for other_child in node['children']:
+                        if other_child['content_path'] == content_path and other_child['id'] != child['id']:
+                            merged_child['id'].append(other_child['id'])
+                            merged_child['playorder'].append(
+                                other_child['playorder'])
+                            merged_child['label'].append(other_child['label'])
+                            merged_child['content_id'].append(
+                                other_child['content_id'])
+                            merged_child['children'].extend(
+                                other_child['children'])
 
-    for part in table_of_content:
-        check_for_duplicate_recursive(part)
+                    if len(merged_child['id']) > 1 and merged_child['children']:
+                        # a merge can't have children
+                        raise RuntimeError(
+                            f"Merged child {merged_child['id']} has children"
+                        )
+
+                    merged_children.append(merged_child)
+
+            if len(merged_children) != len(node['children']):
+                returned_node['children'] = merged_children
+                return returned_node
+            else:
+                # recursively merge children
+                returned_node['children'] = [check_for_duplicate_recursive(
+                    child) for child in returned_node['children']]
+                return returned_node
+
+    for i, part in enumerate(table_of_content):
+        table_of_content[i] = check_for_duplicate_recursive(part)
 
     return table_of_content
 
 
 def parse_item(book: ebooklib.epub.EpubBook, item_href: str):
-    print(item_href)
     item = book.get_item_with_href(item_href)
+    if item is None:
+        raise ValueError(f"No item found for : {item_href}")
+
     item_body_content = item.get_body_content()
-    item_soup = BeautifulSoup(item_body_content, features='lxml')
-    item_text = item_soup.html.body.get_text().strip()
-    return item_text
+    item_soup = BeautifulSoup(item_body_content, "lxml")
+
+    # finding where the majority of p lie
+    p_tags = item_soup.body.find_all('p')
+    tag_counts = {}
+    for p_tag in p_tags:
+        parent_tag = p_tag.parent
+        if parent_tag:
+            tag_counts[parent_tag] = tag_counts.get(parent_tag.name, 0) + 1
+
+    parent_tag = max(tag_counts, key=tag_counts.get)
+
+    content = []
+    for tag in parent_tag.find_all(recursive=False):
+        tag_content = tag.get_text().strip()
+        tag_content = tag_content.replace('\n', ' ').replace('  ', ' ')
+        content.append(tag_content)
+
+    return '\n'.join(content)
 
 
 if __name__ == '__main__':
-    EBOOK_PATH = "data/epubs/Sorceleur - L'Integrale - Andrzej Sapkowski.epub"
+    EBOOK_PATH = "data/epubs/1 - Le Dernier Voeu - Sapkowski, Andrzej.epub"
     book = epub.read_epub(EBOOK_PATH)
 
-    print(json.dumps(extract_structured_toc(book), indent=4))
+    print(json.dumps(extract_structured_toc(book), indent=4, ensure_ascii=False))
+    content = parse_item(
+        book, "Sapkowski, Andrzej - Le Dernier Voeu_split_011.htm")
+    print(content)
+    print(len(content))
 
     """encode
     documents = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
     images = list(book.get_items_of_type(ebooklib.ITEM_IMAGE))
     navigation = list(book.get_items_of_type(ebooklib.ITEM_NAVIGATION))
     covers = list(book.get_items_of_type(ebooklib.ITEM_COVER))
-
-    parse_item("Sapkowski, Andrzej - Le Dernier Voeu_split_004.htm")
     """
