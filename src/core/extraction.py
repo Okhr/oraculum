@@ -47,15 +47,16 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook):
         if child.name == 'navPoint':
             table_of_content.append(process_navpoint_recursive(child))
 
-    # breadth-first validation and potential merging
+    # breadth-first validation and potential merging, also fetches content
     def check_for_duplicate_recursive(node: dict):
         returned_node = {
-            "id": [node['id']],
-            "playorder": [node['playorder']],
-            "label": [node['label']],
-            "content_path": node['content_path'],
-            "content_id": [node['content_id']],
-            "children": node['children']
+            'id': [node['id']],
+            'playorder': [node['playorder']],
+            'label': [node['label']],
+            'content_path': node['content_path'],
+            'content_id': [node['content_id']],
+            'content': parse_item(book, node['content_path']),
+            'children': node['children']
         }
         if node['children'] == []:
             return returned_node
@@ -74,6 +75,7 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook):
                         'label': [child['label']],
                         'content_path': content_path,
                         'content_id': [child['content_id']],
+                        'content': parse_item(book, child['content_path']),
                         'children': child['children']
                     }
                     for other_child in node['children']:
@@ -120,11 +122,16 @@ def parse_item(book: ebooklib.epub.EpubBook, item_href: str):
 
     # finding where the majority of p lie
     p_tags = item_soup.body.find_all('p')
+    if not p_tags:
+        return ''
+
     tag_counts = {}
     for p_tag in p_tags:
         parent_tag = p_tag.parent
         if parent_tag:
             tag_counts[parent_tag] = tag_counts.get(parent_tag.name, 0) + 1
+    
+    print(item_href)
 
     parent_tag = max(tag_counts, key=tag_counts.get)
 
@@ -136,18 +143,31 @@ def parse_item(book: ebooklib.epub.EpubBook, item_href: str):
 
     return '\n'.join(content)
 
+def write_extracted_book_data(book: ebooklib.epub.EpubBook, path: str):
+    extracted_book = {
+        'metadata': extract_book_metadata(book),
+        'data': extract_structured_toc(book)
+    }
+
+    with open(path, 'w') as f:
+        json.dump(extracted_book, f, ensure_ascii=False, indent=4)
 
 if __name__ == '__main__':
-    EBOOK_PATH = "data/epubs/1 - Le Dernier Voeu - Sapkowski, Andrzej.epub"
+    EBOOK_PATH = "data/epubs/1 - Dune - Frank Herbert.epub"
     book = epub.read_epub(EBOOK_PATH)
-
+    write_extracted_book_data(book, 'data/test.json')
+    
+    '''
     print(json.dumps(extract_structured_toc(book), indent=4, ensure_ascii=False))
     content = parse_item(
-        book, "Sapkowski, Andrzej - Le Dernier Voeu_split_011.htm")
+        book, 
+        "p2chap7.xhtml"
+    )
     print(content)
     print(len(content))
+    '''
 
-    """encode
+    """
     documents = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
     images = list(book.get_items_of_type(ebooklib.ITEM_IMAGE))
     navigation = list(book.get_items_of_type(ebooklib.ITEM_NAVIGATION))
