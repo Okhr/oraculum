@@ -1,6 +1,7 @@
 import json
 import ebooklib
 from ebooklib import epub
+import bs4
 from bs4 import BeautifulSoup
 
 
@@ -120,28 +121,18 @@ def parse_item(book: ebooklib.epub.EpubBook, item_href: str):
     item_body_content = item.get_body_content()
     item_soup = BeautifulSoup(item_body_content, "lxml")
 
-    # finding where the majority of p lie
-    p_tags = item_soup.body.find_all('p')
-    if not p_tags:
-        return ''
-
-    tag_counts = {}
-    for p_tag in p_tags:
-        parent_tag = p_tag.parent
-        if parent_tag:
-            tag_counts[parent_tag] = tag_counts.get(parent_tag.name, 0) + 1
+    def merge_tag_recursive(elem: bs4.element.Tag | bs4.element.NavigableString):
+        if isinstance(elem, bs4.element.NavigableString):
+            return elem.get_text(strip=True)
+        elif isinstance(elem, bs4.element.Tag):
+            if elem.name == 'p':
+                return elem.get_text(separator=' ', strip=True)
+            else:
+                return '\n'.join([merge_tag_recursive(child) for child in elem.children])
+        else:
+            raise TypeError('Element is not of type Tag or NavigableString')
     
-    print(item_href)
-
-    parent_tag = max(tag_counts, key=tag_counts.get)
-
-    content = []
-    for tag in parent_tag.find_all(recursive=False):
-        tag_content = tag.get_text().strip()
-        tag_content = tag_content.replace('\n', ' ').replace('  ', ' ')
-        content.append(tag_content)
-
-    return '\n'.join(content)
+    return '\n'.join([merge_tag_recursive(child) for child in item_soup.body.children])
 
 def write_extracted_book_data(book: ebooklib.epub.EpubBook, path: str):
     extracted_book = {
@@ -155,17 +146,15 @@ def write_extracted_book_data(book: ebooklib.epub.EpubBook, path: str):
 if __name__ == '__main__':
     EBOOK_PATH = "data/epubs/1 - Dune - Frank Herbert.epub"
     book = epub.read_epub(EBOOK_PATH)
-    write_extracted_book_data(book, 'data/test.json')
+    # write_extracted_book_data(book, 'data/test.json')
+
     
-    '''
-    print(json.dumps(extract_structured_toc(book), indent=4, ensure_ascii=False))
+    # print(json.dumps(extract_structured_toc(book), indent=4, ensure_ascii=False))
     content = parse_item(
         book, 
-        "p2chap7.xhtml"
+        "p1chap10.xhtml"
     )
     print(content)
-    print(len(content))
-    '''
 
     """
     documents = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
