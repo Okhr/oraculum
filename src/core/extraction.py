@@ -1,4 +1,6 @@
 import json
+import os
+import urllib
 import ebooklib
 from ebooklib import epub
 import bs4
@@ -23,10 +25,9 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook):
         result['playorder'] = navpoint['playOrder']
         result['label'] = navpoint.navLabel.text.strip()
         content_tuple = navpoint.content['src'].split('#')
-        result['content_path'] = content_tuple[0]
-        result['content_id'] = content_tuple[1] if len(
+        result['content_path'] = urllib.parse.unquote(content_tuple[0])
+        result['content_id'] = urllib.parse.unquote(content_tuple[1]) if len(
             content_tuple) > 1 else None
-        # result['content'] = parse_item(book, result['content_path'])
 
         children_navpoints = navpoint.find_all('navPoint')
         if len(children_navpoints) > 0:
@@ -125,14 +126,17 @@ def parse_item(book: ebooklib.epub.EpubBook, item_href: str):
         if isinstance(elem, bs4.element.NavigableString):
             return elem.get_text(strip=True)
         elif isinstance(elem, bs4.element.Tag):
+            # TODO : if a tag contains a succession of spans, merge them without \n first, can be a p, a h1, h2 etc ...
             if elem.name == 'p':
-                return elem.get_text(separator=' ', strip=True)
+                content = elem.get_text(separator=' ', strip=True)
+                return content.replace('\n', ' ').replace('  ', ' ')
             else:
                 return '\n'.join([merge_tag_recursive(child) for child in elem.children])
         else:
             raise TypeError('Element is not of type Tag or NavigableString')
-    
+
     return '\n'.join([merge_tag_recursive(child) for child in item_soup.body.children])
+
 
 def write_extracted_book_data(book: ebooklib.epub.EpubBook, path: str):
     extracted_book = {
@@ -143,22 +147,24 @@ def write_extracted_book_data(book: ebooklib.epub.EpubBook, path: str):
     with open(path, 'w') as f:
         json.dump(extracted_book, f, ensure_ascii=False, indent=4)
 
+
 if __name__ == '__main__':
-    EBOOK_PATH = "data/epubs/1 - Dune - Frank Herbert.epub"
+    '''
+    EBOOK_PATH = "data/epubs/1 - Le Dernier Voeu - Sapkowski, Andrzej.epub"
     book = epub.read_epub(EBOOK_PATH)
-    # write_extracted_book_data(book, 'data/test.json')
 
-    
-    # print(json.dumps(extract_structured_toc(book), indent=4, ensure_ascii=False))
-    content = parse_item(
-        book, 
-        "p1chap10.xhtml"
+    print(parse_item(
+        book, 'Sapkowski, Andrzej - Le Dernier Voeu_split_004.htm')[:5000])
+
+    write_extracted_book_data(
+        book, f'data/extracted_books/test.json'
     )
-    print(content)
-
-    """
-    documents = list(book.get_items_of_type(ebooklib.ITEM_DOCUMENT))
-    images = list(book.get_items_of_type(ebooklib.ITEM_IMAGE))
-    navigation = list(book.get_items_of_type(ebooklib.ITEM_NAVIGATION))
-    covers = list(book.get_items_of_type(ebooklib.ITEM_COVER))
-    """
+    '''
+    if not os.path.exists('data/extracted_books'):
+        os.makedirs('data/extracted_books')
+    for file_name in os.listdir('data/epubs'):
+        print(f'Extracting {file_name}')
+        book = epub.read_epub(f'data/epubs/{file_name}')
+        write_extracted_book_data(
+            book, f'data/extracted_books/{file_name.replace('.epub', '.json')}'
+        )
