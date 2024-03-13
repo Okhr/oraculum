@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import json
 import os
+import concurrent
 from pprint import pp
 import re
 import statistics
@@ -64,26 +65,29 @@ class NamedEntityRecognition:
 
         print('Grouping tags')
         grouped_tags = dict()
+        scores = dict()
         for tag in raw_tags:
             entity_group = tag['entity_group']
             word = tag['word']
             if entity_group not in grouped_tags:
                 grouped_tags[entity_group] = {}
+                scores[entity_group] = {}
             if word not in grouped_tags[entity_group]:
-                grouped_tags[entity_group][word] = {'scores': []}
-            grouped_tags[entity_group][word]['scores'].append(
+                grouped_tags[entity_group][word] = {}
+                scores[entity_group][word] = {'scores': []}
+            scores[entity_group][word]['scores'].append(
                 float(tag['score'])
             )
-            scores = grouped_tags[entity_group][word]['scores']
-            grouped_tags[entity_group][word]['count'] = len(scores)
-            grouped_tags[entity_group][word]['min'] = min(scores)
-            grouped_tags[entity_group][word]['max'] = max(scores)
+            current_scores = scores[entity_group][word]['scores']
+            grouped_tags[entity_group][word]['count'] = len(current_scores)
+            grouped_tags[entity_group][word]['min'] = min(current_scores)
+            grouped_tags[entity_group][word]['max'] = max(current_scores)
             grouped_tags[entity_group][word]['mean'] = statistics.mean(
-                scores) if len(scores) > 1 else scores[0]
+                current_scores) if len(current_scores) > 1 else current_scores[0]
             grouped_tags[entity_group][word]['sdt'] = statistics.stdev(
-                scores) if len(scores) > 1 else 0
+                current_scores) if len(current_scores) > 1 else 0
             grouped_tags[entity_group][word]['median'] = statistics.median(
-                scores) if len(scores) > 1 else scores[0]
+                current_scores) if len(current_scores) > 1 else current_scores[0]
 
         ordered_grouped_tags = OrderedDict()
         for entity_group, name_dict in grouped_tags.items():
@@ -118,11 +122,11 @@ if __name__ == '__main__':
         entity_groups=['PER', 'LOC', 'MISC', 'ORG']
     )
 
-    for book_name in os.listdir('data/extracted_books'):
+    for book_name in os.listdir('data/extracted_books')[:1]:
         print(f'Loading book : {book_name.replace(".json", "")}')
         with open(f'data/extracted_books/{book_name}') as f:
             book_data = json.load(f)
-        raw_content = load_book_raw_content(book_data)
+        raw_content = load_book_raw_content(book_data)[:10]
         grouped_tags = ner.get_grouped_tags(raw_content)
 
         if not os.path.exists('data/tags'):
