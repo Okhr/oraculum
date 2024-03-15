@@ -122,11 +122,11 @@ if __name__ == '__main__':
         entity_groups=['PER', 'LOC', 'MISC', 'ORG']
     )
 
-    for book_name in os.listdir('data/extracted_books')[:1]:
+    for book_name in os.listdir('data/extracted_books'):
         print(f'Loading book : {book_name.replace(".json", "")}')
         with open(f'data/extracted_books/{book_name}') as f:
             book_data = json.load(f)
-        raw_content = load_book_raw_content(book_data)[:10]
+        raw_content = load_book_raw_content(book_data)
         grouped_tags = ner.get_grouped_tags(raw_content)
 
         if not os.path.exists('data/tags'):
