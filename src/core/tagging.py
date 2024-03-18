@@ -58,6 +58,7 @@ class NamedEntityRecognition:
                         'score': tag['score'],
                         'word': tag['word']
                     })
+                    # TODO: Save all t_parts at the begining of the output file and add 'src_text' object to each tag
         return tags
 
     def get_grouped_tags(self, text: str | list[str]):
