@@ -35,12 +35,13 @@ class NamedEntityRecognition:
                 t_part = t_part.strip() if t_part else ''
                 if len(t_part) > min_length:
                     if len(t_part) > self.tokenizer.max_len_single_sentence:
+                        # TODO: if possible, use the number of tokens instead of the number of characters, may be too expensive
                         print(f'Warning : t_part length of {len(t_part)} is longer than max sentence length ({
                               self.tokenizer.max_len_single_sentence}), although it is probably okey since the tokenizer will merge characters')
                     text_parts.append(t_part)
         return text_parts
 
-    def get_raw_tags(self, text: str | list[str]):
+    def get_raw_tags(self, text: str | list[str]) -> tuple[list[dict], list[str]]:
         text_parts = self._preprocess_text(
             text,
             splitting_regex=r"(\\n)+|[.!?]",
@@ -50,19 +51,20 @@ class NamedEntityRecognition:
         tags = []
 
         print('Extracting tags')
-        for t_part in tqdm(text_parts):
+        for i, t_part in enumerate(tqdm(text_parts)):
             for tag in self.nlp_pipeline(t_part):
                 if tag['entity_group'] in self.entity_groups:
                     tags.append({
                         'entity_group': tag['entity_group'],
                         'score': tag['score'],
-                        'word': tag['word']
+                        'word': tag['word'],
+                        'position': (i, tag['start'], tag['end'])
                     })
                     # TODO: Save all t_parts at the begining of the output file and add 'src_text' object to each tag
-        return tags
+        return tags, text_parts
 
-    def get_grouped_tags(self, text: str | list[str]):
-        raw_tags = self.get_raw_tags(text)
+    def get_grouped_tags(self, text: str | list[str]) -> tuple[OrderedDict, list[str]]:
+        raw_tags, text_parts = self.get_raw_tags(text)
 
         print('Grouping tags')
         grouped_tags = dict()
@@ -74,11 +76,13 @@ class NamedEntityRecognition:
                 grouped_tags[entity_group] = {}
                 scores[entity_group] = {}
             if word not in grouped_tags[entity_group]:
-                grouped_tags[entity_group][word] = {}
+                grouped_tags[entity_group][word] = {'positions': []}
                 scores[entity_group][word] = {'scores': []}
             scores[entity_group][word]['scores'].append(
                 float(tag['score'])
             )
+            grouped_tags[entity_group][word]['positions'].append(tag['position'])
+
             current_scores = scores[entity_group][word]['scores']
             grouped_tags[entity_group][word]['count'] = len(current_scores)
             grouped_tags[entity_group][word]['min'] = min(current_scores)
@@ -99,7 +103,7 @@ class NamedEntityRecognition:
                     reverse=True
                 )
             )
-        return OrderedDict(sorted(ordered_grouped_tags.items(), key=lambda x: x[0]))
+        return OrderedDict(sorted(ordered_grouped_tags.items(), key=lambda x: x[0])), text_parts
 
 
 def load_book_raw_content(book_data: dict) -> list[str]:
@@ -123,6 +127,20 @@ if __name__ == '__main__':
         entity_groups=['PER', 'LOC', 'MISC', 'ORG']
     )
 
+    # TEST
+    with open(f'data/extracted_books/1 - Le Dernier Voeu - Sapkowski, Andrzej.json') as f:
+        book_data = json.load(f)
+        raw_content = load_book_raw_content(book_data)[:3]
+        grouped_tags, text_parts = ner.get_grouped_tags(raw_content)
+        result = {
+            "text_parts": text_parts,
+            "tags": grouped_tags
+        }
+    with open(f'data/tags/test.json', 'w') as f:
+        json.dump(result, f, ensure_ascii=False, indent=4)
+    # END TEST
+
+    '''
     for book_name in os.listdir('data/extracted_books'):
         print(f'Loading book : {book_name.replace(".json", "")}')
         with open(f'data/extracted_books/{book_name}') as f:
@@ -137,3 +155,4 @@ if __name__ == '__main__':
             json.dump(grouped_tags, f, ensure_ascii=False, indent=4)
 
         print()
+    '''

@@ -1,6 +1,6 @@
 tagging = {
     "coarse": {
-
+        
     },
     "fine": {
         "provider": "openai",
