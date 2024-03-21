@@ -5,10 +5,12 @@ import json
 import os
 import re
 import statistics
+import time
 from dotenv import load_dotenv
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 from google.cloud import language_v2
+from google.protobuf.json_format import MessageToDict
 
 ENTITY_NAMES = [
     'UNKNOW',
@@ -93,12 +95,25 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
 
         print('Tagging')
         tags = []
+        start_time = time.time()
+        nb_requests = 0
 
         def process_text(t_part, i):
+            # Account for google API rate limit (600 calls per minute)
             nonlocal tags
+            nonlocal start_time
+            nonlocal nb_requests
+
+            while nb_requests / (time.time() - start_time) > 8:
+                print(f"Text part {i}, sleeping for 10s, {nb_requests / (time.time() - start_time)} req/s")
+                time.sleep(10)
+            
+            nb_requests += 1
+            
             document = {
                 "content": t_part,
                 "type_": language_v2.Document.Type.PLAIN_TEXT,
+                "language_code": 'fr'
             }
             response = self.client.analyze_entities(request={
                 "document": document,
@@ -115,14 +130,13 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
                             'position': (i, mention.text.begin_offset, mention.text.begin_offset + len(entity.name))
                         })
 
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=256) as executor:
             futures = []
             for i, t_part in enumerate(text_parts):
                 futures.append(executor.submit(process_text, t_part, i))
 
             for future in tqdm(futures):
-                future.result()  # Wait for each task to complete
-
+                future.result()
         return tags, text_parts
 
 
@@ -214,20 +228,21 @@ if __name__ == '__main__':
 
     '''
     for book_name in os.listdir('data/extracted_books'):
-        print(f'Loading book : {book_name.replace(".json", "")}')
-        with open(f'data/extracted_books/{book_name}') as f:
-            book_data = json.load(f)
-        raw_content = load_book_raw_content(book_data)
-        raw_tags, text_parts = pipeline.tag(raw_content)
-        grouped_tags = group_tags(raw_tags=raw_tags)
+        if not os.path.exists(f'data/tags/{book_name}'):
+            print(f'Loading book : {book_name.replace(".json", "")}')
+            with open(f'data/extracted_books/{book_name}') as f:
+                book_data = json.load(f)
+            raw_content = load_book_raw_content(book_data)
+            raw_tags, text_parts = pipeline.tag(raw_content)
+            grouped_tags = group_tags(raw_tags=raw_tags)
 
-        result = {
-            "text_parts": text_parts,
-            "tags": grouped_tags
-        }
+            result = {
+                "text_parts": text_parts,
+                "tags": grouped_tags
+            }
 
-        if not os.path.exists('data/tags'):
-            os.makedirs('data/tags')
+            if not os.path.exists('data/tags'):
+                os.makedirs('data/tags')
 
-        with open(f'data/tags/{book_name}', 'w') as f:
-            json.dump(result, f, ensure_ascii=False, indent=4)
+            with open(f'data/tags/{book_name}', 'w') as f:
+                json.dump(result, f, ensure_ascii=False, indent=4)
