@@ -28,12 +28,39 @@ ENTITY_NAMES = [
 
 class TaggingPipeline(ABC):
     @abstractmethod
-    def tag(self, text_parts: list[str]) -> list[dict]:
+    def tag(self, text_parts: list[str]) -> tuple[list[dict], list[str]]:
+        """Method to perform named entity recognition on the given text parts.
+
+        Parameters
+        ----------
+        text_parts : list[str]
+            List of text parts to be analyzed.
+
+        Returns
+        -------
+        tuple[list[dict], list[str]]
+            A tuple containing tagged entities and original text parts.
+        """
+
         pass
 
 
 class LocalModelTaggingPipeline(TaggingPipeline):
     def __init__(self, model_name: str, splitting_regex: str) -> None:
+        """Initializes the LocalModelTaggingPipeline.
+
+        Parameters
+        ----------
+        model_name : str
+            Name of the pre-trained model to be used for tagging.
+        splitting_regex : str
+            Regular expression to split text into parts.
+
+        Returns
+        -------
+        None
+        """
+
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForTokenClassification.from_pretrained(
             model_name)
@@ -46,6 +73,18 @@ class LocalModelTaggingPipeline(TaggingPipeline):
         self.splitting_regex = splitting_regex
 
     def tag(self, text: list[str] | str) -> tuple[list[dict], list[str]]:
+        """Performs named entity recognition on the given text parts.
+
+        Parameters
+        ----------
+        text :  list[str] | str
+            Text or list of texts to be analyzed.
+
+        Returns
+        -------
+        tuple[list[dict], list[str]]
+            A tuple containing tagged entities and original text parts.
+        """
         if isinstance(text, str):
             text = [text]
 
@@ -81,6 +120,18 @@ class LocalModelTaggingPipeline(TaggingPipeline):
 
 class GoogleNLPTaggingPipeline(TaggingPipeline):
     def __init__(self, splitting_regex: str) -> None:
+        """Initializes the GoogleNLPTaggingPipeline.
+
+        Parameters
+        ----------
+        splitting_regex : str
+            Regular expression to split text into parts.
+
+        Returns
+        -------
+        None
+        """
+
         self.client = language_v2.LanguageServiceClient(
             client_options={"api_key": os.environ['GOOGLE_API_KEY']}
         )
@@ -89,6 +140,19 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
             capacity=600, refill_interval=0.1)
 
     def tag(self, text: list[str] | str) -> tuple[list[dict], list[str]]:
+        """Performs named entity recognition on the given text parts using Google Cloud NLP API.
+
+        Parameters
+        ----------
+        text : list[str] | str
+            Text or list of texts to be analyzed.
+
+        Returns
+        -------
+        tuple[list[dict], list[str]]
+            A tuple containing tagged entities and original text parts.
+        """
+
         if isinstance(text, str):
             text = [text]
         text_parts = []
@@ -148,6 +212,19 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
 
 
 def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, list[str]]:
+    """Groups raw tags by their entity group and calculate statistics for each group.
+
+    Parameters
+    ----------
+    raw_tags : (list[dict])
+        A list of dictionaries representing raw tags.
+
+    Returns
+    -------
+    tuple[OrderedDict, list[str]]
+        A tuple containing the grouped tags and a list of unique entity groups.
+    """
+
     print('Grouping tags')
     grouped_tags = dict()
     scores = dict()
@@ -190,6 +267,18 @@ def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, list[str]]:
 
 
 def load_book_raw_content(book_data: dict) -> list[str]:
+    """Load the raw content of a book recursively from the given book data.
+
+    Parameters
+    ----------
+    book_data : dict
+        A dictionary containing book data.
+
+    Returns
+    -------
+    list[str]
+        A list containing the raw content of the book.
+    """
     content = []
 
     def load_recursive(node: dict):

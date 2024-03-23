@@ -7,7 +7,16 @@ import bs4
 from bs4 import BeautifulSoup
 
 
-def extract_book_metadata(book: ebooklib.epub.EpubBook):
+def extract_book_metadata(book: ebooklib.epub.EpubBook) -> dict[str, str | list[str]]:
+    """Extract metadata from an EPUB book.
+
+    Parameters:
+    - book (ebooklib.epub.EpubBook): The EPUB book object.
+
+    Returns:
+    - dict: Metadata information including 'identifier', 'title', 'language', and 'creator'.
+    """
+
     return {
         'identifier': book.get_metadata('DC', 'identifier'),
         'title': book.get_metadata('DC', 'title')[0][0],
@@ -16,7 +25,15 @@ def extract_book_metadata(book: ebooklib.epub.EpubBook):
     }
 
 
-def extract_structured_toc(book: ebooklib.epub.EpubBook):
+def extract_structured_toc(book: ebooklib.epub.EpubBook) -> list[dict[str, str | dict]]:
+    """Extract the structured table of contents (TOC) from an EPUB book.
+
+    Parameters:
+    - book (ebooklib.epub.EpubBook): The EPUB book object.
+
+    Returns:
+    - list: A list containing dictionaries representing the structured TOC.
+    """
 
     # depth first toc building
     def process_navpoint_recursive(navpoint):
@@ -114,7 +131,17 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook):
     return table_of_content
 
 
-def parse_item(book: ebooklib.epub.EpubBook, item_href: str):
+def parse_item(book: ebooklib.epub.EpubBook, item_href: str) -> str:
+    """Parse content of a specific item within an EPUB book.
+
+    Parameters:
+    - book (ebooklib.epub.EpubBook): The EPUB book object.
+    - item_href (str): Href of the item to parse.
+
+    Returns:
+    - str: Parsed content of the item.
+    """
+
     item = book.get_item_with_href(item_href)
     if item is None:
         raise ValueError(f"No item found for : {item_href}")
@@ -138,7 +165,14 @@ def parse_item(book: ebooklib.epub.EpubBook, item_href: str):
     return '\n'.join([merge_tag_recursive(child) for child in item_soup.body.children])
 
 
-def write_extracted_book_data(book: ebooklib.epub.EpubBook, path: str):
+def write_extracted_book_data(book: ebooklib.epub.EpubBook, path: str) -> None:
+    """Write extracted metadata and structured TOC of an EPUB book to a JSON file.
+
+    Parameters:
+    - book (ebooklib.epub.EpubBook): The EPUB book object.
+    - path (str): The path to write the JSON file.
+    """
+
     extracted_book = {
         'metadata': extract_book_metadata(book),
         'data': extract_structured_toc(book)
@@ -149,17 +183,6 @@ def write_extracted_book_data(book: ebooklib.epub.EpubBook, path: str):
 
 
 if __name__ == '__main__':
-    '''
-    EBOOK_PATH = "data/epubs/1 - Le Dernier Voeu - Sapkowski, Andrzej.epub"
-    book = epub.read_epub(EBOOK_PATH)
-
-    print(parse_item(
-        book, 'Sapkowski, Andrzej - Le Dernier Voeu_split_004.htm')[:5000])
-
-    write_extracted_book_data(
-        book, f'data/extracted_books/test.json'
-    )
-    '''
     if not os.path.exists('data/extracted_books'):
         os.makedirs('data/extracted_books')
     for file_name in os.listdir('data/epubs'):
