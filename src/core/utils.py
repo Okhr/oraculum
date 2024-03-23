@@ -1,9 +1,8 @@
 from threading import Lock, Timer
-import time
 
 
 class BoundedTokenBucket:
-    def __init__(self, capacity=600, refill_interval=0.1):
+    def __init__(self, capacity, refill_interval):
         self.capacity = capacity
         self.tokens = 0
         self.lock = Lock()
@@ -22,9 +21,12 @@ class BoundedTokenBucket:
     def _refill_bucket(self):
         with self.lock:
             self.tokens = min(self.capacity, self.tokens + 1)
-            print(f'Capacity : {self.tokens}/{self.capacity}')
             self.timer = Timer(self.refill_interval, self._refill_bucket)
             self.timer.start()
+
+    def stop(self):
+        self.timer.cancel()
+
 
 if __name__ == '__main__':
     bucket = BoundedTokenBucket()

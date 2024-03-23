@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 from google.cloud import language_v2
-from google.protobuf.json_format import MessageToDict
+
+from src.core.utils import BoundedTokenBucket
 
 ENTITY_NAMES = [
     'UNKNOW',
@@ -67,9 +68,13 @@ class LocalModelTaggingPipeline(TaggingPipeline):
             for tag in self.tagging_pipeline(t_part):
                 tags.append({
                     'entity_group': tag['entity_group'],
-                    'score': tag['score'],
                     'word': tag['word'],
-                    'position': (i, tag['start'], tag['end'])
+                    'instance': {
+                        'text_part': i,
+                        'start': tag['start'],
+                        'end': tag['end'],
+                        'score': tag['score']
+                    }
                 })
         return tags, text_parts
 
@@ -80,6 +85,8 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
             client_options={"api_key": os.environ['GOOGLE_API_KEY']}
         )
         self.splitting_regex = splitting_regex
+        self.token_bucket = BoundedTokenBucket(
+            capacity=600, refill_interval=0.1)
 
     def tag(self, text: list[str] | str) -> tuple[list[dict], list[str]]:
         if isinstance(text, str):
@@ -95,21 +102,14 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
 
         print('Tagging')
         tags = []
-        start_time = time.time()
-        nb_requests = 0
 
         def process_text(t_part, i):
             # Account for google API rate limit (600 calls per minute)
             nonlocal tags
-            nonlocal start_time
-            nonlocal nb_requests
 
-            while nb_requests / (time.time() - start_time) > 8:
-                print(f"Text part {i}, sleeping for 10s, {nb_requests / (time.time() - start_time)} req/s")
-                time.sleep(10)
-            
-            nb_requests += 1
-            
+            while not self.token_bucket.consume(1):
+                continue
+
             document = {
                 "content": t_part,
                 "type_": language_v2.Document.Type.PLAIN_TEXT,
@@ -125,23 +125,29 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
                     if mention.type_ == language_v2.EntityMention.Type.PROPER:
                         tags.append({
                             'entity_group': ENTITY_NAMES[entity.type_],
-                            'score': mention.probability,
                             'word': entity.name,
-                            'position': (i, mention.text.begin_offset, mention.text.begin_offset + len(entity.name))
+                            'instance': {
+                                'text_part': i,
+                                'start': mention.text.begin_offset,
+                                'end': mention.text.begin_offset + len(entity.name),
+                                'score': mention.probability
+                            }
                         })
 
-        with ThreadPoolExecutor(max_workers=256) as executor:
+        with ThreadPoolExecutor(max_workers=512) as executor:
             futures = []
             for i, t_part in enumerate(text_parts):
                 futures.append(executor.submit(process_text, t_part, i))
 
             for future in tqdm(futures):
                 future.result()
+
+        self.token_bucket.stop()
+
         return tags, text_parts
 
 
 def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, list[str]]:
-
     print('Grouping tags')
     grouped_tags = dict()
     scores = dict()
@@ -152,13 +158,13 @@ def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, list[str]]:
             grouped_tags[entity_group] = {}
             scores[entity_group] = {}
         if word not in grouped_tags[entity_group]:
-            grouped_tags[entity_group][word] = {'positions': []}
+            grouped_tags[entity_group][word] = {'instances': []}
             scores[entity_group][word] = {'scores': []}
         scores[entity_group][word]['scores'].append(
-            float(tag['score'])
+            float(tag['instance']['score'])
         )
-        grouped_tags[entity_group][word]['positions'].append(
-            tag['position'])
+        grouped_tags[entity_group][word]['instances'].append(
+            tag['instance'])
 
         current_scores = scores[entity_group][word]['scores']
         grouped_tags[entity_group][word]['count'] = len(current_scores)
@@ -208,25 +214,7 @@ if __name__ == '__main__':
     '''
 
     pipeline = GoogleNLPTaggingPipeline(splitting_regex=r"[\n]{3,}")
-    '''
-    # TEST
-    with open(f'data/extracted_books/1 - Le Dernier Voeu - Sapkowski, Andrzej.json') as f:
-        book_data = json.load(f)
-        raw_content = load_book_raw_content(book_data)[2:6]
-        raw_tags, text_parts = pipeline.tag(
-            raw_content,
-        )
-        grouped_tags = group_tags(raw_tags=raw_tags)
 
-        result = {
-            "text_parts": text_parts,
-            "tags": grouped_tags
-        }
-    with open(f'data/tags/test.json', 'w') as f:
-        json.dump(result, f, ensure_ascii=False, indent=4)
-    # END TEST
-
-    '''
     for book_name in os.listdir('data/extracted_books'):
         if not os.path.exists(f'data/tags/{book_name}'):
             print(f'Loading book : {book_name.replace(".json", "")}')
@@ -246,3 +234,4 @@ if __name__ == '__main__':
 
             with open(f'data/tags/{book_name}', 'w') as f:
                 json.dump(result, f, ensure_ascii=False, indent=4)
+            exit()
