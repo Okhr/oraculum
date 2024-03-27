@@ -8,6 +8,7 @@ if __name__ == '__main__':
 
     client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
 
+    '''
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -27,4 +28,11 @@ if __name__ == '__main__':
         temperature=1.0,
         top_p=1.0
     )
+    '''
+
+    response = client.embeddings.create(
+        input="Your text string goes here",
+        model="text-embedding-3-small"
+    )
+
     print(response)
