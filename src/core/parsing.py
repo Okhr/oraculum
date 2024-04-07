@@ -1,5 +1,8 @@
+from ast import parse
 import json
 import os
+from pprint import pp
+import re
 import urllib
 import ebooklib
 from ebooklib import epub
@@ -52,7 +55,7 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook) -> list[dict[str, str |
         content_tuple = navpoint.content['src'].split('#')
         result['content_path'] = urllib.parse.unquote(content_tuple[0])
         result['content_id'] = urllib.parse.unquote(content_tuple[1]) if len(
-            content_tuple) > 1 else None
+            content_tuple) > 1 else ''
 
         children_navpoints = navpoint.find_all('navPoint')
         if len(children_navpoints) > 0:
@@ -77,12 +80,12 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook) -> list[dict[str, str |
     # breadth-first validation and potential merging, also fetches content
     def check_for_duplicate_recursive(node: dict):
         returned_node = {
-            'id': [node['id']],
-            'playorder': [node['playorder']],
-            'label': [node['label']],
+            'id': node['id'],
+            'playorder': node['playorder'],
+            'label': node['label'],
             'content_path': node['content_path'],
-            'content_id': [node['content_id']],
-            'content': parse_item(book, node['content_path']),
+            'content_id': node['content_id'],
+            'content': parse_item(book, node['content_path'], node['label']),
             'children': node['children']
         }
         if node['children'] == []:
@@ -97,26 +100,26 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook) -> list[dict[str, str |
                     # new unseen content_path
                     content_paths.add(content_path)
                     merged_child = {
-                        'id': [child['id']],
-                        'playorder': [child['playorder']],
-                        'label': [child['label']],
+                        'id': child['id'],
+                        'playorder': child['playorder'],
+                        'label': child['label'],
                         'content_path': content_path,
-                        'content_id': [child['content_id']],
-                        'content': parse_item(book, child['content_path']),
+                        'content_id': child['content_id'],
+                        'content': parse_item(book, child['content_path'], child['label']),
                         'children': child['children']
                     }
                     for other_child in node['children']:
                         if other_child['content_path'] == content_path and other_child['id'] != child['id']:
-                            merged_child['id'].append(other_child['id'])
-                            merged_child['playorder'].append(
-                                other_child['playorder'])
-                            merged_child['label'].append(other_child['label'])
-                            merged_child['content_id'].append(
-                                other_child['content_id'])
+                            merged_child['id'] += '|' + other_child['id']
+                            merged_child['playorder'] += '|' + \
+                                other_child['playorder']
+                            merged_child['label'] += '|' + other_child['label']
+                            merged_child['content_id'] += '|' + \
+                                other_child['content_id']
                             merged_child['children'].extend(
                                 other_child['children'])
 
-                    if len(merged_child['id']) > 1 and merged_child['children']:
+                    if '|' in merged_child['id'] and merged_child['children']:
                         # a merge can't have children
                         raise RuntimeError(
                             f"Merged child {merged_child['id']} has children"
@@ -139,7 +142,7 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook) -> list[dict[str, str |
     return table_of_content
 
 
-def parse_item(book: ebooklib.epub.EpubBook, item_href: str) -> str:
+def parse_item(book: ebooklib.epub.EpubBook, item_href: str, label: str) -> str:
     """Parse content of a specific item within an EPUB book.
 
     Parameters
@@ -148,6 +151,8 @@ def parse_item(book: ebooklib.epub.EpubBook, item_href: str) -> str:
         The EPUB book object.
     item_href : str
         Href of the item to parse.
+    label : str
+        Label of the text part
 
     Returns
     -------
@@ -175,7 +180,42 @@ def parse_item(book: ebooklib.epub.EpubBook, item_href: str) -> str:
         else:
             raise TypeError('Element is not of type Tag or NavigableString')
 
-    return '\n'.join([merge_tag_recursive(child) for child in item_soup.body.children])
+    parsed_content = '\n'.join([merge_tag_recursive(child)
+                               for child in item_soup.body.children])
+
+    parsed_content = parsed_content.replace("’", "'")
+    parsed_content = remove_title(parsed_content.strip(), label)
+    parsed_content = re.sub(r'(\n{3,})', r'\n\n\n', parsed_content)
+
+    return parsed_content
+
+
+def remove_title(text_part: str, title: str) -> str:
+    """Remove, if possible, the text contained in the 'title' parameter from the beginning of the text
+
+    Parameters
+    ----------
+    text_part : str
+        The raw text
+    title : str
+        The portion of text to remove
+
+    Returns
+    -------
+    str
+        Text with title removed
+    """
+    text_part = text_part.strip()
+    title = title.strip()
+
+    while len(title) > 0 and len(text_part) > 0:
+        if text_part[0].lower() == title[0].lower():
+            text_part = text_part[1:].strip()
+            title = title[1:].strip()
+        else:
+            break
+
+    return text_part
 
 
 def write_extracted_book_data(book: ebooklib.epub.EpubBook, path: str) -> None:
@@ -183,7 +223,7 @@ def write_extracted_book_data(book: ebooklib.epub.EpubBook, path: str) -> None:
 
     Parameters
     ----------
-    book : ebooklib.epub.EpubBook)
+    book : ebooklib.epub.EpubBook
         The EPUB book object.
     path : str
         The path to write the JSON file.
