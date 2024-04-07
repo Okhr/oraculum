@@ -10,11 +10,15 @@ from bs4 import BeautifulSoup
 def extract_book_metadata(book: ebooklib.epub.EpubBook) -> dict[str, str | list[str]]:
     """Extract metadata from an EPUB book.
 
-    Parameters:
-    - book (ebooklib.epub.EpubBook): The EPUB book object.
+    Parameters
+    ----------
+    book : ebooklib.epub.EpubBook
+        The EPUB book object.
 
-    Returns:
-    - dict: Metadata information including 'identifier', 'title', 'language', and 'creator'.
+    Returns
+    -------
+    dict
+        Metadata information including 'identifier', 'title', 'language', and 'creator'.
     """
 
     return {
@@ -28,11 +32,15 @@ def extract_book_metadata(book: ebooklib.epub.EpubBook) -> dict[str, str | list[
 def extract_structured_toc(book: ebooklib.epub.EpubBook) -> list[dict[str, str | dict]]:
     """Extract the structured table of contents (TOC) from an EPUB book.
 
-    Parameters:
-    - book (ebooklib.epub.EpubBook): The EPUB book object.
+    Parameters
+    ----------
+    book : ebooklib.epub.EpubBook
+        The EPUB book object.
 
-    Returns:
-    - list: A list containing dictionaries representing the structured TOC.
+    Returns
+    -------
+    list[dict]
+        A list containing dictionaries representing the structured TOC.
     """
 
     # depth first toc building
@@ -134,12 +142,17 @@ def extract_structured_toc(book: ebooklib.epub.EpubBook) -> list[dict[str, str |
 def parse_item(book: ebooklib.epub.EpubBook, item_href: str) -> str:
     """Parse content of a specific item within an EPUB book.
 
-    Parameters:
-    - book (ebooklib.epub.EpubBook): The EPUB book object.
-    - item_href (str): Href of the item to parse.
+    Parameters
+    ----------
+    book : ebooklib.epub.EpubBook
+        The EPUB book object.
+    item_href : str
+        Href of the item to parse.
 
-    Returns:
-    - str: Parsed content of the item.
+    Returns
+    -------
+    str
+        Parsed content of the item.
     """
 
     item = book.get_item_with_href(item_href)
@@ -168,9 +181,16 @@ def parse_item(book: ebooklib.epub.EpubBook, item_href: str) -> str:
 def write_extracted_book_data(book: ebooklib.epub.EpubBook, path: str) -> None:
     """Write extracted metadata and structured TOC of an EPUB book to a JSON file.
 
-    Parameters:
-    - book (ebooklib.epub.EpubBook): The EPUB book object.
-    - path (str): The path to write the JSON file.
+    Parameters
+    ----------
+    book : ebooklib.epub.EpubBook)
+        The EPUB book object.
+    path : str
+        The path to write the JSON file.
+
+    Returns
+    -------
+    None
     """
 
     extracted_book = {
