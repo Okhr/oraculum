@@ -309,28 +309,8 @@ if __name__ == '__main__':
     load_dotenv()
     coarse_tagging_config = core_config['tagging']['coarse']
 
-    # tagger = LocalModelTaggingPipeline(**coarse_tagging_config['local_model'])
-    tagger = GoogleNLPTaggingPipeline(**coarse_tagging_config['google_nlp'])
-
-    with open(f'data/extracted_books/5 - Le Bapteme Du Feu - Sapkowski, Andrzej.json') as f:
-        book_data = json.load(f)
-        raw_content = load_book_raw_content(book_data)
-        raw_tags, text_parts = tagger.tag(raw_content)
-        grouped_tags, unique_entity_groups = group_tags(raw_tags=raw_tags)
-        print(f'Unique entity groups : {unique_entity_groups}')
-
-        result = {
-            "text_parts": text_parts,
-            "tags": grouped_tags
-        }
-
-        if not os.path.exists('data/tags'):
-            os.makedirs('data/tags')
-
-        with open(f'data/tags/Sorceleur5-google.json', 'w') as f:
-            json.dump(result, f, ensure_ascii=False, indent=4)
-
-    exit()
+    tagger = LocalModelTaggingPipeline(**coarse_tagging_config['local_model'])
+    # tagger = GoogleNLPTaggingPipeline(**coarse_tagging_config['google_nlp'])
 
     for book_name in os.listdir('data/extracted_books'):
         if not os.path.exists(f'data/tags/{book_name}'):
