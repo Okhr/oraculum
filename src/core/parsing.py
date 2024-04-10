@@ -1,7 +1,5 @@
-from ast import parse
 import json
 import os
-from pprint import pp
 import re
 import urllib
 import ebooklib

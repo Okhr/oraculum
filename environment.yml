@@ -1,0 +1,21 @@
+name: book-assistant
+channels:
+  - conda-forge
+dependencies:
+  - ebooklib
+  - bs4
+  - transformers
+  - ca-certificates
+  - openssl
+  - sentencepiece
+  - certifi
+  - protobuf
+  - pytorch
+  - torchvision
+  - torchaudio
+  - python-dotenv
+  - google-cloud-language
+  - jupyter
+  - openai
+  - langchain-text-splitters
+prefix: /home/x/miniforge3/envs/book-assistant
