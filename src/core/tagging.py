@@ -278,6 +278,54 @@ def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, set]:
     return OrderedDict(sorted(ordered_grouped_tags.items(), key=lambda x: x[0])), unique_entity_groups
 
 
+def group_tags_by_entity_names(grouped_tags: dict) -> OrderedDict[str, list[tuple[str, float, float]]]:
+    """Group tags by entity name
+
+    Parameters
+    ----------
+    grouped_tags : dict
+        Tags grouped by entity group
+
+    Returns
+    -------
+    OrderedDict[str, list[tuple[str, float, float]]]
+        Tags grouped by entity name, with occurencre and a proportion associated with each class
+    """
+
+    entities = dict()
+    for eg_key, eg_value in grouped_tags.items():
+        for tag_key, tag_value in eg_value.items():
+            if tag_key not in entities.keys():
+                entities[tag_key] = {}
+            entities[tag_key][eg_key] = {
+                'count': tag_value['count'],
+                'median': tag_value['median'],
+            }
+
+    print(entities)
+
+    entity_name_entity_groups_association = OrderedDict()
+    for entity_name, entity_info in entities.items():
+        total_tags = sum([info['count'] for info in entity_info.values()])
+        eg_tuples = []
+        for entity_group, entity_group_info in entity_info.items():
+            eg_tuples.append(
+                (entity_group, entity_group_info['count'], entity_group_info['count']/total_tags))
+        eg_tuples = sorted(eg_tuples, reverse=True, key=lambda x: x[2])
+        entity_name_entity_groups_association[entity_name] = (
+            total_tags, eg_tuples
+        )
+
+    print(entity_name_entity_groups_association)
+    exit()
+
+    entity_name_entity_groups_association = OrderedDict(sorted(
+        entity_name_entity_groups_association.items(),
+        reverse=True,
+        key=lambda x: x[1][0]
+    ))
+
+
 def load_book_raw_content(book_data: dict) -> list[str]:
     """Load the raw content of a book recursively from the given book data.
 
@@ -291,6 +339,7 @@ def load_book_raw_content(book_data: dict) -> list[str]:
     list[str]
         A list containing the raw content of the book.
     """
+
     content = []
 
     def load_recursive(node: dict):
@@ -309,6 +358,7 @@ if __name__ == '__main__':
     load_dotenv()
     coarse_tagging_config = core_config['tagging']['coarse']
 
+    '''
     tagger = LocalModelTaggingPipeline(**coarse_tagging_config['local_model'])
     # tagger = GoogleNLPTaggingPipeline(**coarse_tagging_config['google_nlp'])
 
@@ -331,3 +381,9 @@ if __name__ == '__main__':
 
             with open(f'data/tags/{book_name}', 'w') as f:
                 json.dump(result, f, ensure_ascii=False, indent=4)
+    '''
+
+    with open('data/tags/Sorceleur5-local.json', 'r') as f:
+        data = json.load(f)
+
+    group_tags_by_entity_names(data['tags'])
