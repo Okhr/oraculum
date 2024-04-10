@@ -5,25 +5,13 @@ import json
 import os
 import re
 import statistics
-import time
 from dotenv import load_dotenv
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 from google.cloud import language_v2
 
 from src.core.utils import BoundedTokenBucket
-
-ENTITY_NAMES = [
-    'UNKNOW',
-    'PERSON',
-    'LOCATION',
-    'ORGANIZATION',
-    'EVENT',
-    'WORK_OF_ART',
-    'CONSUMER_GOOD',
-    'OTHER',
-    'PHONE_NUMBER',
-]
+from src.config import core as core_config
 
 
 class TaggingPipeline(ABC):
@@ -112,7 +100,7 @@ class LocalModelTaggingPipeline(TaggingPipeline):
                         'text_part': i,
                         'start': tag['start'],
                         'end': tag['end'],
-                        'score': tag['score']
+                        'score': float(tag['score'])
                     }
                 })
         return tags, text_parts
@@ -138,6 +126,28 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
         self.splitting_regex = splitting_regex
         self.token_bucket = BoundedTokenBucket(
             capacity=600, refill_interval=0.1)
+        self.entity_names = [
+            'UNKNOW',
+            'PERSON',
+            'LOCATION',
+            'ORGANIZATION',
+            'EVENT',
+            'WORK_OF_ART',
+            'CONSUMER_GOOD',
+            'OTHER',
+            'PHONE_NUMBER',
+        ]
+        self.entity_mapping = {
+            'UNKNOW': 'MISC',
+            'PERSON': 'PER',
+            'LOCATION': 'LOC',
+            'ORGANIZATION': 'ORG',
+            'EVENT': 'MISC',
+            'WORK_OF_ART': 'MISC',
+            'CONSUMER_GOOD': 'MISC',
+            'OTHER': 'MISC',
+            'PHONE_NUMBER': 'MISC',
+        }
 
     def tag(self, text: list[str] | str) -> tuple[list[dict], list[str]]:
         """Performs named entity recognition on the given text parts using Google Cloud NLP API.
@@ -188,13 +198,13 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
                 for mention in entity.mentions:
                     if mention.type_ == language_v2.EntityMention.Type.PROPER:
                         tags.append({
-                            'entity_group': ENTITY_NAMES[entity.type_],
+                            'entity_group': self.entity_mapping[self.entity_names[entity.type_]],
                             'word': entity.name,
                             'instance': {
                                 'text_part': i,
                                 'start': mention.text.begin_offset,
                                 'end': mention.text.begin_offset + len(entity.name),
-                                'score': mention.probability
+                                'score': float(mention.probability)
                             }
                         })
 
@@ -211,7 +221,7 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
         return tags, text_parts
 
 
-def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, list[str]]:
+def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, set]:
     """Groups raw tags by their entity group and calculate statistics for each group.
 
     Parameters
@@ -221,15 +231,17 @@ def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, list[str]]:
 
     Returns
     -------
-    tuple[OrderedDict, list[str]]
-        A tuple containing the grouped tags and a list of unique entity groups.
+    tuple[OrderedDict, set]
+        A tuple containing the grouped tags and a set of unique entity groups.
     """
 
     print('Grouping tags')
     grouped_tags = dict()
+    unique_entity_groups = set()
     scores = dict()
     for tag in raw_tags:
         entity_group = tag['entity_group']
+        unique_entity_groups.add(entity_group)
         word = tag['word']
         if entity_group not in grouped_tags:
             grouped_tags[entity_group] = {}
@@ -263,7 +275,7 @@ def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, list[str]]:
                 reverse=True
             )
         )
-    return OrderedDict(sorted(ordered_grouped_tags.items(), key=lambda x: x[0]))
+    return OrderedDict(sorted(ordered_grouped_tags.items(), key=lambda x: x[0])), unique_entity_groups
 
 
 def load_book_raw_content(book_data: dict) -> list[str]:
@@ -295,14 +307,30 @@ def load_book_raw_content(book_data: dict) -> list[str]:
 
 if __name__ == '__main__':
     load_dotenv()
-    '''
-    pipeline = LocalModelTaggingPipeline(
-        model_name='Jean-Baptiste/camembert-ner',
-        splitting_regex=r"(\\n)+|[.!?]"
-    )
-    '''
+    coarse_tagging_config = core_config['tagging']['coarse']
 
-    pipeline = GoogleNLPTaggingPipeline(splitting_regex=r"[\n]{3,}")
+    # tagger = LocalModelTaggingPipeline(**coarse_tagging_config['local_model'])
+    tagger = GoogleNLPTaggingPipeline(**coarse_tagging_config['google_nlp'])
+
+    with open(f'data/extracted_books/5 - Le Bapteme Du Feu - Sapkowski, Andrzej.json') as f:
+        book_data = json.load(f)
+        raw_content = load_book_raw_content(book_data)
+        raw_tags, text_parts = tagger.tag(raw_content)
+        grouped_tags, unique_entity_groups = group_tags(raw_tags=raw_tags)
+        print(f'Unique entity groups : {unique_entity_groups}')
+
+        result = {
+            "text_parts": text_parts,
+            "tags": grouped_tags
+        }
+
+        if not os.path.exists('data/tags'):
+            os.makedirs('data/tags')
+
+        with open(f'data/tags/Sorceleur5-google.json', 'w') as f:
+            json.dump(result, f, ensure_ascii=False, indent=4)
+
+    exit()
 
     for book_name in os.listdir('data/extracted_books'):
         if not os.path.exists(f'data/tags/{book_name}'):
@@ -310,8 +338,8 @@ if __name__ == '__main__':
             with open(f'data/extracted_books/{book_name}') as f:
                 book_data = json.load(f)
             raw_content = load_book_raw_content(book_data)
-            raw_tags, text_parts = pipeline.tag(raw_content)
-            grouped_tags = group_tags(raw_tags=raw_tags)
+            raw_tags, text_parts = tagger.tag(raw_content)
+            grouped_tags, unique_entity_groups = group_tags(raw_tags=raw_tags)
 
             result = {
                 "text_parts": text_parts,
@@ -323,4 +351,3 @@ if __name__ == '__main__':
 
             with open(f'data/tags/{book_name}', 'w') as f:
                 json.dump(result, f, ensure_ascii=False, indent=4)
-            exit()
