@@ -21,15 +21,16 @@ core = {
         },
         'filters': [
             {
-                'class': 'MajorityClassCountTagFilter', 
+                'class': 'MajorityClassCountTagFilter',
                 'config': {'min_count': 5}
             },
             {
-                'class': 'BlacklistTagFilter', 
+                'class': 'BlacklistTagFilter',
                 'config': {
                     'blacklist': [
-                        r'(L|l|Le|le|La|la)',
-                        r'(Ca|ca|ça|Ça)',
+                        r'(^Je$|^Il$)',
+                        r'(^L$|^Le$|^La$|^Les$)',
+                        r'(^Ca$|^Ça$|^Ce$|^Si$)',
                         r'^[a-z][^\s]*$',
                         r'^.$'
                     ]

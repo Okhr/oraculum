@@ -228,7 +228,8 @@ class TagFilter(ABC):
 
         Parameters
         ----------
-        grouped_tags : OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+        grouped_tags : OrderedDict[str,
+            OrderedDict[str, dict[str, int | float]]]
             Unfiltered tags
 
         Returns
@@ -255,7 +256,8 @@ class MajorityClassCountTagFilter(TagFilter):
 
         Parameters
         ----------
-        grouped_tags : OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+        grouped_tags : OrderedDict[str,
+            OrderedDict[str, dict[str, int | float]]]
             Unfiltered tags
         min_count : int
             Minimum number of occurences of the majority class to keep the tag
@@ -284,13 +286,15 @@ class MajorityClassCountTagFilter(TagFilter):
 
         return filtered_tags
 
+
 class BlacklistTagFilter(TagFilter):
     def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]], blacklist: list[str]) -> None:
         """Initializes the blacklist tag filter
 
         Parameters
         ----------
-        grouped_tags : OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+        grouped_tags : OrderedDict[str,
+            OrderedDict[str, dict[str, int | float]]]
             Unfiltered tags
         blacklist : list[str]
             list of regex that will not pass the filter
@@ -312,8 +316,11 @@ class BlacklistTagFilter(TagFilter):
         """
 
         filtered_tags = OrderedDict()
+        for k, v in self.grouped_tags.items():
+            if all([(not re.match(pattern, k)) for pattern in self.blacklist]):
+                filtered_tags[k] = v
 
-        # TODO
+        return filtered_tags
 
 
 def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, set]:
@@ -477,10 +484,11 @@ if __name__ == '__main__':
         data = json.load(f)
 
     grouped_tags = group_tags_by_entity_names(data['tags'])
-    filter_classes = [globals()[filter['class']] for filter in core_config['tagging']['filters']]
-    
+    filter_classes = [globals()[filter['class']]
+                      for filter in core_config['tagging']['filters']]
+
     for c, config in zip(filter_classes, [filter['config'] for filter in core_config['tagging']['filters']]):
         grouped_tags = c(grouped_tags, **config).filter()
-    
+
     for k, v in grouped_tags.items():
         print(k, v)
