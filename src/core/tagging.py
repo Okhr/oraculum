@@ -222,6 +222,69 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
         return tags, text_parts
 
 
+class TagFilter(ABC):
+    def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]]) -> None:
+        """Initializes the tag filter
+
+        Parameters
+        ----------
+        grouped_tags : OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+            Unfiltered tags
+
+        Returns
+        -------
+        None
+        """
+        self.grouped_tags = grouped_tags
+
+    @abstractmethod
+    def filter(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
+        """Method to filter tags based on various characteristics
+
+        Returns
+        -------
+        OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+            Sub set of grouped_tags containing filtered tags only
+        """
+        pass
+
+
+class MajorityClassCountTagFilter(TagFilter):
+    def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]], min_count: int) -> None:
+        """Initializes the majority class count tag filter
+
+        Parameters
+        ----------
+        grouped_tags : OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+            Unfiltered tags
+        min_count : int
+            Minimum number of occurences of the majority class to keep the tag
+
+        Returns
+        -------
+        None
+        """
+        super().__init__(grouped_tags)
+        self.min_count = min_count
+
+    def filter(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
+        """Method to filter tags based on the majority class
+
+        Returns
+        -------
+        OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+            Sub set of grouped_tags containing filtered tags only
+        """
+
+        filtered_tags = OrderedDict()
+
+        for k, v in self.grouped_tags.items():
+            if next(iter(v.values()))['count'] >= self.min_count:
+                filtered_tags[k] = v
+
+        return filtered_tags
+
+
 def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, set]:
     """Groups raw tags by their entity group and calculate statistics for each group.
 
@@ -382,4 +445,6 @@ if __name__ == '__main__':
     with open('data/tags/Sorceleur5-local.json', 'r') as f:
         data = json.load(f)
 
-    group_tags_by_entity_names(data['tags'])
+    grouped_tags = group_tags_by_entity_names(data['tags'])
+    f1 = MajorityClassCountTagFilter(grouped_tags, 5)
+    pp(f1.filter())
