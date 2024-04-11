@@ -284,6 +284,37 @@ class MajorityClassCountTagFilter(TagFilter):
 
         return filtered_tags
 
+class BlacklistTagFilter(TagFilter):
+    def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]], blacklist: list[str]) -> None:
+        """Initializes the blacklist tag filter
+
+        Parameters
+        ----------
+        grouped_tags : OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+            Unfiltered tags
+        blacklist : list[str]
+            list of regex that will not pass the filter
+
+        Returns
+        -------
+        None
+        """
+        super().__init__(grouped_tags)
+        self.blacklist = blacklist
+
+    def filter(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
+        """Method to filter tags based on a blacklist of regex
+
+        Returns
+        -------
+        OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+            Sub set of grouped_tags containing filtered tags only
+        """
+
+        filtered_tags = OrderedDict()
+
+        # TODO
+
 
 def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, set]:
     """Groups raw tags by their entity group and calculate statistics for each group.
@@ -446,5 +477,10 @@ if __name__ == '__main__':
         data = json.load(f)
 
     grouped_tags = group_tags_by_entity_names(data['tags'])
-    f1 = MajorityClassCountTagFilter(grouped_tags, 5)
-    pp(f1.filter())
+    filter_classes = [globals()[filter['class']] for filter in core_config['tagging']['filters']]
+    
+    for c, config in zip(filter_classes, [filter['config'] for filter in core_config['tagging']['filters']]):
+        grouped_tags = c(grouped_tags, **config).filter()
+    
+    for k, v in grouped_tags.items():
+        print(k, v)

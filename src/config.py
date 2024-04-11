@@ -19,6 +19,23 @@ core = {
                 'splitting_regex': r'[\n]{3,}'
             }
         },
+        'filters': [
+            {
+                'class': 'MajorityClassCountTagFilter', 
+                'config': {'min_count': 5}
+            },
+            {
+                'class': 'BlacklistTagFilter', 
+                'config': {
+                    'blacklist': [
+                        r'(L|l|Le|le|La|la)',
+                        r'(Ca|ca|ça|Ça)',
+                        r'^[a-z][^\s]*$',
+                        r'^.$'
+                    ]
+                }
+            }
+        ],
         'fine': {}
     },
     'chunking': {
