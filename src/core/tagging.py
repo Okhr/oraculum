@@ -222,15 +222,14 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
         return tags, text_parts
 
 
-class TagFilter(ABC):
+class TagChecker(ABC):
     def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]]) -> None:
-        """Initializes the tag filter
+        """Initializes the tag checker
 
         Parameters
         ----------
-        grouped_tags : OrderedDict[str,
-            OrderedDict[str, dict[str, int | float]]]
-            Unfiltered tags
+        grouped_tags : OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+            Unckecked tags
 
         Returns
         -------
@@ -239,25 +238,24 @@ class TagFilter(ABC):
         self.grouped_tags = grouped_tags
 
     @abstractmethod
-    def filter(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
-        """Method to filter tags based on various characteristics
+    def check(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
+        """Method to check tags based on various characteristics
 
         Returns
         -------
         OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
-            Sub set of grouped_tags containing filtered tags only
+            Sub set of grouped_tags containing checked tags (modified or deleted)
         """
         pass
 
 
-class MajorityClassCountTagFilter(TagFilter):
+class MajorityClassCountTagFilter(TagChecker):
     def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]], min_count: int) -> None:
-        """Initializes the majority class count tag filter
+        """Initializes the majority class count tag filter (cannot modify tags, only delete them)
 
         Parameters
         ----------
-        grouped_tags : OrderedDict[str,
-            OrderedDict[str, dict[str, int | float]]]
+        grouped_tags : OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
             Unfiltered tags
         min_count : int
             Minimum number of occurences of the majority class to keep the tag
@@ -269,7 +267,7 @@ class MajorityClassCountTagFilter(TagFilter):
         super().__init__(grouped_tags)
         self.min_count = min_count
 
-    def filter(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
+    def check(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
         """Method to filter tags based on the majority class
 
         Returns
@@ -287,14 +285,13 @@ class MajorityClassCountTagFilter(TagFilter):
         return filtered_tags
 
 
-class BlacklistTagFilter(TagFilter):
+class BlacklistTagFilter(TagChecker):
     def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]], blacklist: list[str]) -> None:
-        """Initializes the blacklist tag filter
+        """Initializes the blacklist tag filter (cannot modify tags, only delete them)
 
         Parameters
         ----------
-        grouped_tags : OrderedDict[str,
-            OrderedDict[str, dict[str, int | float]]]
+        grouped_tags : OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
             Unfiltered tags
         blacklist : list[str]
             list of regex that will not pass the filter
@@ -306,7 +303,7 @@ class BlacklistTagFilter(TagFilter):
         super().__init__(grouped_tags)
         self.blacklist = blacklist
 
-    def filter(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
+    def check(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
         """Method to filter tags based on a blacklist of regex
 
         Returns
@@ -321,6 +318,32 @@ class BlacklistTagFilter(TagFilter):
                 filtered_tags[k] = v
 
         return filtered_tags
+
+
+class LLMTagChecker(TagChecker):
+    def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]]) -> None:
+        """Initializes the LLM tag checker (can modify and delete tags)
+
+        Parameters
+        ----------
+        grouped_tags : OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+            Unchecked tags
+
+        Returns
+        -------
+        None
+        """
+        super().__init__(grouped_tags)
+
+    def check(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
+        """Method to check tags and validate their class with a LLM
+
+        Returns
+        -------
+        OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
+            Sub set of grouped_tags containing checked tags only
+        """
+        pass
 
 
 def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, set]:
@@ -480,15 +503,15 @@ if __name__ == '__main__':
                 json.dump(result, f, ensure_ascii=False, indent=4)
     '''
 
-    with open('data/tags/Sorceleur5-local.json', 'r') as f:
+    with open("data/tags/Sorceleur - L'Integrale - Andrzej Sapkowski.json", 'r') as f:
         data = json.load(f)
 
     grouped_tags = group_tags_by_entity_names(data['tags'])
-    filter_classes = [globals()[filter['class']]
-                      for filter in core_config['tagging']['filters']]
+    checker_classes = [globals()[checker['class']]
+                       for checker in core_config['tagging']['checkers']]
 
-    for c, config in zip(filter_classes, [filter['config'] for filter in core_config['tagging']['filters']]):
-        grouped_tags = c(grouped_tags, **config).filter()
+    for c, config in zip(checker_classes, [checker['config'] for checker in core_config['tagging']['checkers']]):
+        grouped_tags = c(grouped_tags, **config).check()
 
     for k, v in grouped_tags.items():
         print(k, v)

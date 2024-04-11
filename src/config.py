@@ -19,7 +19,7 @@ core = {
                 'splitting_regex': r'[\n]{3,}'
             }
         },
-        'filters': [
+        'checkers': [
             {
                 'class': 'MajorityClassCountTagFilter',
                 'config': {'min_count': 5}
