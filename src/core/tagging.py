@@ -3,6 +3,7 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
+from pprint import pp
 import re
 import statistics
 from dotenv import load_dotenv
@@ -278,7 +279,7 @@ def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, set]:
     return OrderedDict(sorted(ordered_grouped_tags.items(), key=lambda x: x[0])), unique_entity_groups
 
 
-def group_tags_by_entity_names(grouped_tags: dict) -> OrderedDict[str, list[tuple[str, float, float]]]:
+def group_tags_by_entity_names(grouped_tags: dict[str, dict]) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
     """Group tags by entity name
 
     Parameters
@@ -288,42 +289,37 @@ def group_tags_by_entity_names(grouped_tags: dict) -> OrderedDict[str, list[tupl
 
     Returns
     -------
-    OrderedDict[str, list[tuple[str, float, float]]]
+    OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
         Tags grouped by entity name, with occurencre and a proportion associated with each class
     """
 
-    entities = dict()
+    entities = OrderedDict()
     for eg_key, eg_value in grouped_tags.items():
         for tag_key, tag_value in eg_value.items():
             if tag_key not in entities.keys():
-                entities[tag_key] = {}
+                entities[tag_key] = OrderedDict()
             entities[tag_key][eg_key] = {
-                'count': tag_value['count'],
-                'median': tag_value['median'],
+                'count': tag_value['count']
             }
 
-    print(entities)
+    for k1, v1 in entities.items():
+        total_count = sum([v['count'] for v in v1.values()])
+        v1 = OrderedDict(sorted(
+            v1.items(),
+            key=lambda x: x[1]['count'],
+            reverse=True
+        ))
+        entities[k1] = v1
+        for v2 in v1.values():
+            v2['weight'] = v2['count'] / total_count
 
-    entity_name_entity_groups_association = OrderedDict()
-    for entity_name, entity_info in entities.items():
-        total_tags = sum([info['count'] for info in entity_info.values()])
-        eg_tuples = []
-        for entity_group, entity_group_info in entity_info.items():
-            eg_tuples.append(
-                (entity_group, entity_group_info['count'], entity_group_info['count']/total_tags))
-        eg_tuples = sorted(eg_tuples, reverse=True, key=lambda x: x[2])
-        entity_name_entity_groups_association[entity_name] = (
-            total_tags, eg_tuples
-        )
-
-    print(entity_name_entity_groups_association)
-    exit()
-
-    entity_name_entity_groups_association = OrderedDict(sorted(
-        entity_name_entity_groups_association.items(),
-        reverse=True,
-        key=lambda x: x[1][0]
+    entities = OrderedDict(sorted(
+        entities.items(),
+        key=lambda x: sum([v['count'] for v in x[1].values()]),
+        reverse=True
     ))
+
+    return (entities)
 
 
 def load_book_raw_content(book_data: dict) -> list[str]:
