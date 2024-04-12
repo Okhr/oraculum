@@ -1,5 +1,6 @@
-name: book-assistant
+name: oraculum
 channels:
+  - pytorch
   - conda-forge
 dependencies:
   - ebooklib
@@ -18,4 +19,3 @@ dependencies:
   - jupyter
   - openai
   - langchain-text-splitters
-prefix: /home/x/miniforge3/envs/book-assistant
