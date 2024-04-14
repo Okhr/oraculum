@@ -38,8 +38,31 @@ core = {
             }
         ],
         'fine': {}
+    }
+}
+
+frontend = {
+
+}
+
+backend = {
+
+}
+
+book_store = {
+    'weaviate_connection': {
+        'http_host': "192.168.1.103",
+        'http_port': 8080,
+        'http_secure': False,
+        'grpc_host': "192.168.1.103",
+        'grpc_port': 50051,
+        'grpc_secure': False
     },
     'chunking': {
+        'sizes': [
+            (250, 50),
+            (1000, 100)
+        ],
         'text_splitter': {
             'class': RecursiveCharacterTextSplitter,
             'parameters': {
@@ -54,62 +77,4 @@ core = {
         'model': 'text-embedding-3-small',
         'dimensions': 1536
     }
-}
-
-frontend = {
-
-}
-
-backend = {
-
-}
-
-weaviate_database = {
-    'connection': {
-        'http_host': "192.168.1.103",
-        'http_port': 8080,
-        'http_secure': False,
-        'grpc_host': "192.168.1.103",
-        'grpc_port': 50051,
-        'grpc_secure': False
-    },
-    'collections': [
-        {
-            'name': 'Book_metadata',
-            'properties': [
-                {'name': 'identifier', 'data_type': wc.DataType.TEXT},
-                {'name': 'title', 'data_type': wc.DataType.TEXT},
-                {'name': 'language', 'data_type': wc.DataType.TEXT},
-                {'name': 'creator', 'data_type': wc.DataType.TEXT}
-            ]
-        },
-        {
-            'name': 'Text_parts',
-            'properties': [
-                {'name': 'book_id', 'data_type': wc.DataType.TEXT},
-                {'name': 'parent_id', 'data_type': wc.DataType.TEXT},
-                {'name': 'identifier', 'data_type': wc.DataType.TEXT},
-                {'name': 'play_order', 'data_type': wc.DataType.TEXT},
-                {'name': 'label', 'data_type': wc.DataType.TEXT},
-                {'name': 'content_path', 'data_type': wc.DataType.TEXT},
-                {'name': 'content_id', 'data_type': wc.DataType.TEXT}
-            ]
-        },
-        {
-            'name': 'Chunks_250_50',
-            'properties': [
-                {'name': 'parent_id', 'data_type': wc.DataType.TEXT},
-                {'name': 'chunk_number', 'data_type': wc.DataType.NUMBER},
-                {'name': 'content', 'data_type': wc.DataType.TEXT}
-            ]
-        },
-        {
-            'name': 'Chunks_1000_100',
-            'properties': [
-                {'name': 'parent_id', 'data_type': wc.DataType.TEXT},
-                {'name': 'chunk_number', 'data_type': wc.DataType.NUMBER},
-                {'name': 'content', 'data_type': wc.DataType.TEXT}
-            ]
-        }
-    ]
 }

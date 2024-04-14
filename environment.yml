@@ -1,7 +1,7 @@
 name: oraculum
 channels:
-  - pytorch
   - conda-forge
+  - pytorch
 dependencies:
   - ebooklib
   - bs4
@@ -19,3 +19,6 @@ dependencies:
   - jupyter
   - openai
   - langchain-text-splitters
+  - pip
+  - pip:
+    - weaviate-client
