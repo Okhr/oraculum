@@ -1,8 +1,11 @@
+import hashlib
+import json
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
 import weaviate
 import weaviate.classes.config as wc
+import weaviate.classes.query as wq
 
 from src.config import book_store as bookstore_config
 
@@ -90,6 +93,105 @@ class BookStore:
         metadata = book_data['metadata']
         content = book_data['data']
 
+        book_id = hashlib.sha256(json.dumps(metadata['identifier'], sort_keys=True).encode()).hexdigest()
+        print(f'book_id : {book_id}')
+
+        with weaviate.connect_to_custom(**self.weaviate_connection_dict) as client:
+            book_metadata_collection = client.collections.get('Book_metadata')
+            book_parts_collection = client.collections.get('Book_parts')
+            chunk_collections = [client.collections.get(f'Chunks_{chunk_size[0]}{chunk_size[1]}') for chunk_size in self.chunk_sizes]
+
+            with book_metadata_collection.batch.dynamic() as batch:
+                book_metadata_obj = {
+                    "title": metadata['title'],
+                    "language": metadata['language'],
+                    "creator": metadata['creator']
+                }
+                batch.add_object(
+                    properties=book_metadata_obj,
+                    uuid=book_id,
+                )
+            
+            if len(book_metadata_collection.batch.failed_objects) > 0:
+                print(f"Failed to import book metadata : {book_metadata_collection.batch.failed_objects}")
+            
+            # Iterating over book parts
+            def insert_book_part_recursive(book_part: dict, parent_id: str):
+                print(f'Inserting : {book_part["label"]}')
+                with book_parts_collection.batch.dynamic() as batch:
+                    obj = {
+                        "book_id": book_id,
+                        "parent_id": parent_id,
+                        "identifier": book_part['id'],
+                        "play_order": book_part['playorder'],
+                        "label": book_part['label'],
+                        "content_path": book_part['content_path'],
+                        "content_id": book_part['content_id']
+                    }
+                    batch.add_object(
+                        properties=obj
+                    )
+            
+                if len(book_parts_collection.batch.failed_objects) > 0:
+                    print(f"Failed to import book parts : {book_parts_collection.batch.failed_objects}")
+                
+                # splitting content for each chunk size:
+                for i in range(len(self.chunk_sizes)):
+                    chunk_collection = chunk_collections[i]
+                    chunks = self.text_splitters[i].split_text(book_part['content'])
+                    if not chunks:
+                        chunks = [' ']
+                    embeddings = self._embedd_text_chunks(chunks)
+
+                    with chunk_collection.batch.dynamic() as batch:
+                        for i, chunk in enumerate(chunks):
+                            obj = {
+                                "book_id": book_id,
+                                "parent_id": book_part['id'],
+                                "chunk_number": i,
+                                "content": chunk
+                            }
+                            batch.add_object(
+                                properties=obj,
+                                vector=embeddings[i]
+                            )
+                
+                    if len(chunk_collection.batch.failed_objects) > 0:
+                        print(f"Failed to import {self.chunk_sizes[i]} chunks: {chunk_collection.batch.failed_objects}")
+                    
+                for child in book_part['children']:
+                    insert_book_part_recursive(child, book_part['id'])
+
+            for child in content:
+                insert_book_part_recursive(child, '')
+
+    def retrieve_chunks(self, book_id: str, query: str, chunk_size: tuple[int, int], max_retrieved_chunks: int, contains_token: list[str] = None) -> list[tuple[str, float]]:
+        if chunk_size not in self.chunk_sizes:
+            raise ValueError(f'Chunk size : {chunk_size} is not valid')
+        else:
+            query_vector = self._embedd_text_chunks([query])[0]
+
+            with weaviate.connect_to_custom(**self.weaviate_connection_dict) as client:
+                chunk_collection = client.collections.get(f'Chunks_{chunk_size[0]}_{chunk_size[1]}')
+
+                if contains_token is not None:
+                    response = chunk_collection.query.near_vector(
+                        near_vector=query_vector,
+                        limit=max_retrieved_chunks,
+                        return_metadata=wq.MetadataQuery(distance=True),
+                        filters=wq.Filter.by_property("book_id").equal(book_id) &  
+                        wq.Filter.by_property("content").contains_any(contains_token)
+                    )
+                else:
+                    response = chunk_collection.query.near_vector(
+                        near_vector=query_vector,
+                        limit=max_retrieved_chunks,
+                        return_metadata=wq.MetadataQuery(distance=True),
+                        filters=wq.Filter.by_property("book_id").equal(book_id)
+                    )
+
+                return [(o.properties['content'], o.metadata.distance) for o in reversed(response.objects)]
+
 
 if __name__ == '__main__':
     load_dotenv()
@@ -99,4 +201,8 @@ if __name__ == '__main__':
         bookstore_config['chunking']['text_splitter'],
         bookstore_config['embedding']
     )
-    book_store.list_collections()
+    
+    with open("data/extracted_books/Alain Damasio - La Horde du Contrevent.json", 'r') as f:
+        data = json.load(f)
+    
+    book_store.insert_book(data)
