@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+from pprint import pp
 from dotenv import load_dotenv
 from openai import OpenAI
 import weaviate
@@ -37,6 +38,8 @@ class BookStore:
                 client.collections.create(
                     name='Book_metadata',
                     properties=[
+                        wc.Property(name='book_id',
+                                    data_type=wc.DataType.TEXT),
                         wc.Property(name='title',
                                     data_type=wc.DataType.TEXT),
                         wc.Property(name='language',
@@ -81,7 +84,7 @@ class BookStore:
                         ]
                     )
 
-    def _embedd_text_chunks(self, text_chunks: list[str]) -> list[list[float]]:
+    def _embed_text_chunks(self, text_chunks: list[str]) -> list[list[float]]:
         response = self.embedding_client.embeddings.create(
             input=text_chunks,
             **self.embedding_parameters
@@ -99,17 +102,17 @@ class BookStore:
         with weaviate.connect_to_custom(**self.weaviate_connection_dict) as client:
             book_metadata_collection = client.collections.get('Book_metadata')
             book_parts_collection = client.collections.get('Book_parts')
-            chunk_collections = [client.collections.get(f'Chunks_{chunk_size[0]}{chunk_size[1]}') for chunk_size in self.chunk_sizes]
+            chunk_collections = [client.collections.get(f'Chunks_{chunk_size[0]}_{chunk_size[1]}') for chunk_size in self.chunk_sizes]
 
             with book_metadata_collection.batch.dynamic() as batch:
                 book_metadata_obj = {
+                    "book_id": book_id,
                     "title": metadata['title'],
                     "language": metadata['language'],
                     "creator": metadata['creator']
                 }
                 batch.add_object(
                     properties=book_metadata_obj,
-                    uuid=book_id,
                 )
             
             if len(book_metadata_collection.batch.failed_objects) > 0:
@@ -141,7 +144,7 @@ class BookStore:
                     chunks = self.text_splitters[i].split_text(book_part['content'])
                     if not chunks:
                         chunks = [' ']
-                    embeddings = self._embedd_text_chunks(chunks)
+                    embeddings = self._embed_text_chunks(chunks)
 
                     with chunk_collection.batch.dynamic() as batch:
                         for i, chunk in enumerate(chunks):
@@ -169,7 +172,7 @@ class BookStore:
         if chunk_size not in self.chunk_sizes:
             raise ValueError(f'Chunk size : {chunk_size} is not valid')
         else:
-            query_vector = self._embedd_text_chunks([query])[0]
+            query_vector = self._embed_text_chunks([query])[0]
 
             with weaviate.connect_to_custom(**self.weaviate_connection_dict) as client:
                 chunk_collection = client.collections.get(f'Chunks_{chunk_size[0]}_{chunk_size[1]}')
@@ -192,6 +195,9 @@ class BookStore:
 
                 return [(o.properties['content'], o.metadata.distance) for o in reversed(response.objects)]
 
+    def delete(self):
+        with weaviate.connect_to_custom(**self.weaviate_connection_dict) as client:
+            client.collections.delete_all()
 
 if __name__ == '__main__':
     load_dotenv()
@@ -201,8 +207,17 @@ if __name__ == '__main__':
         bookstore_config['chunking']['text_splitter'],
         bookstore_config['embedding']
     )
-    
+
     with open("data/extracted_books/Alain Damasio - La Horde du Contrevent.json", 'r') as f:
         data = json.load(f)
     
-    book_store.insert_book(data)
+    # book_store.insert_book(data)
+    retrieved_chunks = book_store.retrieve_chunks(
+        book_id='3c8459fb052f31052df97f4aa04e5eb7eb7c2bccf28a670447f652d1133ba6c2',
+        query='Quelles sont toutes les formes du vent ?',
+        chunk_size=(1000, 100),
+        max_retrieved_chunks=10,
+        contains_token=['matière', 'vent', 'eau']
+    )
+
+    pp(retrieved_chunks)
