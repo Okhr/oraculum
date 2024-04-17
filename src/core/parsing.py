@@ -8,7 +8,7 @@ import bs4
 from bs4 import BeautifulSoup
 
 
-from src.config import core as core_config
+from src.config import parsing as parsing_config
 
 
 def extract_book_metadata(book: ebooklib.epub.EpubBook) -> dict[str, str | list[str]]:
@@ -184,10 +184,10 @@ def parse_item(book: ebooklib.epub.EpubBook, item_href: str, label: str) -> str:
     parsed_content = '\n'.join([merge_tag_recursive(child)
                                for child in item_soup.body.children])
 
-    if core_config['parsing']['remove_title']:
+    if parsing_config['remove_title']:
         parsed_content = remove_title(parsed_content.strip(), label)
 
-    for replacement in core_config['parsing']['replace']:
+    for replacement in parsing_config['replace']:
         parsed_content = re.sub(replacement[0], replacement[1], parsed_content)
 
     return parsed_content

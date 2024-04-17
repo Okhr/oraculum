@@ -7,12 +7,15 @@ from pprint import pp
 import re
 import statistics
 from dotenv import load_dotenv
+from openai import OpenAI
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 from google.cloud import language_v2
 
+from src.core.book_store import BookStore
 from src.core.utils import BoundedTokenBucket
-from src.config import core as core_config
+from src.config import tagging as tagging_config
+from src.config import book_store as bookstore_config
 
 
 class TaggingPipeline(ABC):
@@ -222,9 +225,9 @@ class GoogleNLPTaggingPipeline(TaggingPipeline):
         return tags, text_parts
 
 
-class TagChecker(ABC):
+class TagFilter(ABC):
     def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]]) -> None:
-        """Initializes the tag checker
+        """Initializes the tag filter
 
         Parameters
         ----------
@@ -238,7 +241,7 @@ class TagChecker(ABC):
         self.grouped_tags = grouped_tags
 
     @abstractmethod
-    def check(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
+    def filter(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
         """Method to check tags based on various characteristics
 
         Returns
@@ -249,7 +252,7 @@ class TagChecker(ABC):
         pass
 
 
-class MajorityClassCountTagFilter(TagChecker):
+class MajorityClassCountTagFilter(TagFilter):
     def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]], min_count: int) -> None:
         """Initializes the majority class count tag filter (cannot modify tags, only delete them)
 
@@ -267,7 +270,7 @@ class MajorityClassCountTagFilter(TagChecker):
         super().__init__(grouped_tags)
         self.min_count = min_count
 
-    def check(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
+    def filter(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
         """Method to filter tags based on the majority class
 
         Returns
@@ -285,7 +288,7 @@ class MajorityClassCountTagFilter(TagChecker):
         return filtered_tags
 
 
-class BlacklistTagFilter(TagChecker):
+class BlacklistTagFilter(TagFilter):
     def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]], blacklist: list[str]) -> None:
         """Initializes the blacklist tag filter (cannot modify tags, only delete them)
 
@@ -303,7 +306,7 @@ class BlacklistTagFilter(TagChecker):
         super().__init__(grouped_tags)
         self.blacklist = blacklist
 
-    def check(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
+    def filter(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
         """Method to filter tags based on a blacklist of regex
 
         Returns
@@ -320,22 +323,40 @@ class BlacklistTagFilter(TagChecker):
         return filtered_tags
 
 
-class LLMTagChecker(TagChecker):
-    def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]]) -> None:
-        """Initializes the LLM tag checker (can modify and delete tags)
+class OpenAIFineTagger:
+    def __init__(self, grouped_tags: OrderedDict[str, OrderedDict[str, dict[str, int | float]]], book_id: str, config: dict, book_store: BookStore) -> None:
+        """Initializes the LLM fine tagger, it will check for low confidence tags and prompt a LLM about them
 
         Parameters
         ----------
         grouped_tags : OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
             Unchecked tags
+        book_id : str
+            Used to filter text chunks from the vector database
+        config : dict
+            Tagger config such as prompt_template, number of chunks, chunk size
 
         Returns
         -------
         None
         """
-        super().__init__(grouped_tags)
+        self.grouped_tags = grouped_tags
 
-    def check(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
+        self.book_id = book_id
+        self.book_store = book_store
+
+        self.prompt_template = config['prompt_template']
+        self.majority_class_threshold = config['majority_class_threshold']
+        self.number_chunks = config['number_chunks']
+
+        self.chunk_size = config['chunk_size']
+        if self.chunk_size not in book_store.chunk_sizes:
+            raise ValueError(f'{self.chunk_size} is not a valid chunk size')
+
+        self.vector_db_query = config['vector_db_query']
+        self.llm_client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+
+    def fine_tag(self) -> OrderedDict[str, OrderedDict[str, dict[str, int | float]]]:
         """Method to check tags and validate their class with a LLM
 
         Returns
@@ -343,7 +364,47 @@ class LLMTagChecker(TagChecker):
         OrderedDict[str, OrderedDict[str, dict[str, int | float]]]
             Sub set of grouped_tags containing checked tags only
         """
-        pass
+        fine_tags = dict()
+        for k, v in self.grouped_tags.items():
+            if next(iter(v.values()))['weight'] < self.majority_class_threshold:
+                print(k)
+                # retrieve chunks to feed to the LLM
+                retrieved_chunks = book_store.retrieve_chunks(
+                    book_id=self.book_id,
+                    query=self.vector_db_query,
+                    chunk_size=self.chunk_size,
+                    max_retrieved_chunks=self.number_chunks,
+                    contains_token=[k]
+                )
+
+                chunk_string = '\n---\n'.join(
+                    [elem[0] for elem in retrieved_chunks]
+                )
+
+                prompt = self.prompt_template.format(
+                    chunks=chunk_string,
+                    entity=k
+                )
+
+                response = self.llm_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "user", "content": prompt}
+                    ],
+                    n=1,
+                    temperature=1.0,
+                    top_p=1.0
+                )
+                llm_class = response.choices[0].message.content.strip()
+
+                if llm_class not in ['PER', 'LOC', 'ORG', 'MISC']:
+                    raise ValueError(
+                        f'Entity group : {llm_class} is not valid'
+                    )
+                print(llm_class)
+                fine_tags[k] = llm_class
+
+        return fine_tags
 
 
 def group_tags(raw_tags: list[dict]) -> tuple[OrderedDict, set]:
@@ -476,7 +537,8 @@ def load_book_raw_content(book_data: dict) -> list[str]:
 
 if __name__ == '__main__':
     load_dotenv()
-    coarse_tagging_config = core_config['tagging']['coarse']
+    coarse_tagging_config = tagging_config['coarse']
+    fine_tagging_config = tagging_config['fine']
 
     '''
     tagger = LocalModelTaggingPipeline(**coarse_tagging_config['local_model'])
@@ -507,11 +569,30 @@ if __name__ == '__main__':
         data = json.load(f)
 
     grouped_tags = group_tags_by_entity_names(data['tags'])
-    checker_classes = [globals()[checker['class']]
-                       for checker in core_config['tagging']['checkers']]
+    filter_classes = [globals()[filter['class']]
+                      for filter in tagging_config['filters']]
 
-    for c, config in zip(checker_classes, [checker['config'] for checker in core_config['tagging']['checkers']]):
-        grouped_tags = c(grouped_tags, **config).check()
+    for c, config in zip(filter_classes, [checker['config'] for checker in tagging_config['filters']]):
+        grouped_tags = c(grouped_tags, **config).filter()
 
-    for k, v in grouped_tags.items():
-        print(k, v)
+    # fine tagging
+    book_store = BookStore(
+        bookstore_config['weaviate_connection'],
+        bookstore_config['chunking']['sizes'],
+        bookstore_config['chunking']['text_splitter'],
+        bookstore_config['embedding']
+    )
+
+    # globals()[fine_tagging_config['class']]
+    fine_tags = OpenAIFineTagger(
+        grouped_tags=grouped_tags,
+        book_id='472db0b004210c3a6a749b29570dd5af69ba279bd5abee626f4d6fb803b32c6c',
+        config=fine_tagging_config['config'],
+        book_store=book_store
+    ).fine_tag()
+
+    if not os.path.exists('data/fine_tags'):
+        os.makedirs('data/fine_tags')
+
+    with open("data/fine_tags/Sorceleur - L'Integrale - Andrzej Sapkowski.json", 'w') as f:
+        json.dump(fine_tags, f, indent=4, ensure_ascii=False)
