@@ -398,10 +398,16 @@ class OpenAIFineTagger:
                 llm_class = response.choices[0].message.content.strip()
 
                 if llm_class not in ['PER', 'LOC', 'ORG', 'MISC']:
-                    raise ValueError(
-                        f'Entity group : {llm_class} is not valid'
-                    )
+                    print(f'LLM output is malformed : {llm_class}')
+                    tag_presence = [int((tag in llm_class)) for tag in ['PER', 'LOC', 'ORG', 'MISC']]
+                    if sum(tag_presence) == 1:
+                        llm_class = ['PER', 'LOC', 'ORG', 'MISC'][tag_presence.index(1)]
+                        print(f'LLM output has been recovered : {llm_class}')
+                    else:
+                        print(f' LLM output : {llm_class} is not valid and couln\'t be recovered')
+                    
                 print(llm_class)
+                print()
                 fine_tags[k] = llm_class
 
         return fine_tags
