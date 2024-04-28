@@ -8,7 +8,7 @@ import bs4
 from bs4 import BeautifulSoup
 
 
-from src.config import parsing as parsing_config
+from core.config import parsing as parsing_config
 
 
 def extract_book_metadata(book: ebooklib.epub.EpubBook) -> dict[str, str | list[str]]:

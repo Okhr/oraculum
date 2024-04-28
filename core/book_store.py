@@ -8,7 +8,7 @@ import weaviate
 import weaviate.classes.config as wc
 import weaviate.classes.query as wq
 
-from src.config import book_store as bookstore_config
+from core.config import book_store as bookstore_config
 
 
 class BookStore:
@@ -96,15 +96,13 @@ class BookStore:
         metadata = book_data['metadata']
         content = book_data['data']
 
-        book_id = hashlib.sha256(json.dumps(
-            metadata['identifier'], sort_keys=True).encode()).hexdigest()
+        book_id = hashlib.sha256(json.dumps(metadata['identifier'], sort_keys=True).encode()).hexdigest()
         print(f'book_id : {book_id}')
 
         with weaviate.connect_to_custom(**self.weaviate_connection_dict) as client:
             book_metadata_collection = client.collections.get('Book_metadata')
             book_parts_collection = client.collections.get('Book_parts')
-            chunk_collections = [client.collections.get(
-                f'Chunks_{chunk_size[0]}_{chunk_size[1]}') for chunk_size in self.chunk_sizes]
+            chunk_collections = [client.collections.get(f'Chunks_{chunk_size[0]}_{chunk_size[1]}') for chunk_size in self.chunk_sizes]
 
             with book_metadata_collection.batch.dynamic() as batch:
                 book_metadata_obj = {
@@ -118,8 +116,7 @@ class BookStore:
                 )
 
             if len(book_metadata_collection.batch.failed_objects) > 0:
-                print(f"Failed to import book metadata : {
-                      book_metadata_collection.batch.failed_objects}")
+                print(f"Failed to import book metadata : {book_metadata_collection.batch.failed_objects}")
 
             # Iterating over book parts
             def insert_book_part_recursive(book_part: dict, parent_id: str):
@@ -134,19 +131,15 @@ class BookStore:
                         "content_path": book_part['content_path'],
                         "content_id": book_part['content_id']
                     }
-                    batch.add_object(
-                        properties=obj
-                    )
+                    batch.add_object(properties=obj)
 
                 if len(book_parts_collection.batch.failed_objects) > 0:
-                    print(f"Failed to import book parts : {
-                          book_parts_collection.batch.failed_objects}")
+                    print(f"Failed to import book parts : {book_parts_collection.batch.failed_objects}")
 
                 # splitting content for each chunk size:
                 for i in range(len(self.chunk_sizes)):
                     chunk_collection = chunk_collections[i]
-                    chunks = self.text_splitters[i].split_text(
-                        book_part['content'])
+                    chunks = self.text_splitters[i].split_text(book_part['content'])
                     if not chunks:
                         chunks = [' ']
                     embeddings = self._embed_text_chunks(chunks)
@@ -165,8 +158,7 @@ class BookStore:
                             )
 
                     if len(chunk_collection.batch.failed_objects) > 0:
-                        print(f"Failed to import {self.chunk_sizes[i]} chunks: {
-                              chunk_collection.batch.failed_objects}")
+                        print(f"Failed to import {self.chunk_sizes[i]} chunks: {chunk_collection.batch.failed_objects}")
 
                 for child in book_part['children']:
                     insert_book_part_recursive(child, book_part['id'])
@@ -181,17 +173,14 @@ class BookStore:
             query_vector = self._embed_text_chunks([query])[0]
 
             with weaviate.connect_to_custom(**self.weaviate_connection_dict) as client:
-                chunk_collection = client.collections.get(
-                    f'Chunks_{chunk_size[0]}_{chunk_size[1]}')
+                chunk_collection = client.collections.get(f'Chunks_{chunk_size[0]}_{chunk_size[1]}')
 
                 if contains_token is not None:
                     response = chunk_collection.query.near_vector(
                         near_vector=query_vector,
                         limit=max_retrieved_chunks,
                         return_metadata=wq.MetadataQuery(distance=True),
-                        filters=wq.Filter.by_property("book_id").equal(book_id) &
-                        wq.Filter.by_property(
-                            "content").contains_any(contains_token)
+                        filters=wq.Filter.by_property("book_id").equal(book_id) & wq.Filter.by_property("content").contains_any(contains_token)
                     )
                 else:
                     response = chunk_collection.query.near_vector(
@@ -216,18 +205,20 @@ if __name__ == '__main__':
         bookstore_config['chunking']['text_splitter'],
         bookstore_config['embedding']
     )
-    book_store.delete()
-    with open("data/extracted_books/Sorceleur - L'Integrale - Andrzej Sapkowski.json", 'r') as f:
+
+    # book_store.delete()
+
+    with open("data/extracted_books/1-Maia - Riley, Lucinda.json", 'r') as f:
         data = json.load(f)
 
     book_store.insert_book(data)
 
     retrieved_chunks = book_store.retrieve_chunks(
-        book_id='55d5d45b5d08076c83c8adf4cbc6ca83857edad9aa8e1972521e99dc2ebb21ec',
+        book_id='472db0b004210c3a6a749b29570dd5af69ba279bd5abee626f4d6fb803b32c6c',
         query='person, location, organization, other',
         chunk_size=(250, 50),
         max_retrieved_chunks=10,
-        contains_token=['Signe']
+        # contains_token=['Geralt']
     )
 
     for text, distance in retrieved_chunks:

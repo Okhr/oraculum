@@ -12,10 +12,10 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 from google.cloud import language_v2
 
-from src.core.book_store import BookStore
-from src.core.utils import BoundedTokenBucket
-from src.config import tagging as tagging_config
-from src.config import book_store as bookstore_config
+from core.book_store import BookStore
+from core.utils import BoundedTokenBucket
+from core.config import tagging as tagging_config
+from core.config import book_store as bookstore_config
 
 
 class TaggingPipeline(ABC):
@@ -399,13 +399,16 @@ class OpenAIFineTagger:
 
                 if llm_class not in ['PER', 'LOC', 'ORG', 'MISC']:
                     print(f'LLM output is malformed : {llm_class}')
-                    tag_presence = [int((tag in llm_class)) for tag in ['PER', 'LOC', 'ORG', 'MISC']]
+                    tag_presence = [int((tag in llm_class))
+                                    for tag in ['PER', 'LOC', 'ORG', 'MISC']]
                     if sum(tag_presence) == 1:
-                        llm_class = ['PER', 'LOC', 'ORG', 'MISC'][tag_presence.index(1)]
+                        llm_class = ['PER', 'LOC', 'ORG',
+                                     'MISC'][tag_presence.index(1)]
                         print(f'LLM output has been recovered : {llm_class}')
                     else:
-                        print(f' LLM output : {llm_class} is not valid and couln\'t be recovered')
-                    
+                        print(f' LLM output : {
+                              llm_class} is not valid and couln\'t be recovered')
+
                 print(llm_class)
                 print()
                 fine_tags[k] = llm_class
@@ -546,7 +549,6 @@ if __name__ == '__main__':
     coarse_tagging_config = tagging_config['coarse']
     fine_tagging_config = tagging_config['fine']
 
-    '''
     tagger = LocalModelTaggingPipeline(**coarse_tagging_config['local_model'])
     # tagger = GoogleNLPTaggingPipeline(**coarse_tagging_config['google_nlp'])
 
@@ -569,9 +571,8 @@ if __name__ == '__main__':
 
             with open(f'data/tags/{book_name}', 'w') as f:
                 json.dump(result, f, ensure_ascii=False, indent=4)
-    '''
 
-    with open("data/tags/Sorceleur - L'Integrale - Andrzej Sapkowski.json", 'r') as f:
+    with open("data/tags/1-Maia - Riley, Lucinda.json", 'r') as f:
         data = json.load(f)
 
     grouped_tags = group_tags_by_entity_names(data['tags'])
@@ -580,6 +581,10 @@ if __name__ == '__main__':
 
     for c, config in zip(filter_classes, [checker['config'] for checker in tagging_config['filters']]):
         grouped_tags = c(grouped_tags, **config).filter()
+
+    for k, v in grouped_tags.items():
+        print(k, '\t', v)
+    exit()
 
     # fine tagging
     book_store = BookStore(
@@ -592,7 +597,7 @@ if __name__ == '__main__':
     # globals()[fine_tagging_config['class']]
     fine_tags = OpenAIFineTagger(
         grouped_tags=grouped_tags,
-        book_id='472db0b004210c3a6a749b29570dd5af69ba279bd5abee626f4d6fb803b32c6c',
+        book_id='86b2e1851765c25637edad76b18ffbf8bdefe36113ac80bbb11ff9d8df616b3c',
         config=fine_tagging_config['config'],
         book_store=book_store
     ).fine_tag()
@@ -600,5 +605,5 @@ if __name__ == '__main__':
     if not os.path.exists('data/fine_tags'):
         os.makedirs('data/fine_tags')
 
-    with open("data/fine_tags/Sorceleur - L'Integrale - Andrzej Sapkowski.json", 'w') as f:
+    with open("data/fine_tags/1-Maia - Riley, Lucinda.json", 'w') as f:
         json.dump(fine_tags, f, indent=4, ensure_ascii=False)
