@@ -20,8 +20,8 @@ The application is not yet deployed but I'm working hard for a minimal alpha ver
 - [x] ePub parsing / TOC and content extraction
 - [x] Named Entity Recognition : local models and Google NLP API
 - [x] Text chunking and embedding
-- [ ] Refined tagging with LLM model
-- [ ] FastAPI backend
+- [x] Refined tagging with LLM model
+- [x] FastAPI backend authentication boilerplate
 - [ ] React frontend
 - [ ] RAG chatbot
 - [ ] Monitoring

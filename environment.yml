@@ -20,5 +20,11 @@ dependencies:
   - openai
   - langchain-text-splitters
   - pip
+  - fastapi
+  - uvicorn
+  - sqlalchemy
+  - python-jose
+  - psycopg2
+  - passlib
   - pip:
     - weaviate-client
