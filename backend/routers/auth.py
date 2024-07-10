@@ -48,6 +48,10 @@ async def create_user(payload: schemas.CreateUserSchema, db: Session = Depends(g
     user_in_db = db.query(models.User).filter(models.User.name == payload.name).first()
     if user_in_db:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'User {payload.name} already exists')
+    
+    user_in_db = db.query(models.User).filter(models.User.email == payload.email).first()
+    if user_in_db:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Email {payload.email} is already used')
 
     if payload.password != payload.password_confirm:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Passwords do not match')

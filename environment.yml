@@ -26,5 +26,6 @@ dependencies:
   - python-jose
   - psycopg2
   - passlib
+  - alembic
   - pip:
-    - weaviate-client
+      - weaviate-client

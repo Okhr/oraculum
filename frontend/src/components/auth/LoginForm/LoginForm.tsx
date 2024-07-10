@@ -18,6 +18,7 @@ import config from "../../../config.json";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { jwtDecode } from "jwt-decode";
+import { useNavigate } from "react-router-dom";
 
 type FormValues = {
   username: string;
@@ -31,6 +32,7 @@ const schema = yup.object().shape({
 
 const LoginForm = () => {
   const signIn = useSignIn();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -41,30 +43,38 @@ const LoginForm = () => {
   });
 
   const onSubmit = (data: FormValues) => {
-    console.log(data);
     axios
       .post(config.API_URL + "/auth/login", data, {
         headers: { "Content-Type": "multipart/form-data" },
       })
       .then((response) => {
         if (response.status === 200) {
-          console.log(jwtDecode(response.data.access_token));
           if (
             signIn({
               auth: {
                 token: response.data.access_token,
                 type: "Bearer",
               },
+              userState: {
+                username: jwtDecode(response.data.access_token).sub,
+              },
             })
           ) {
             toast.success("Login successful");
+            navigate("/home");
           } else {
             toast.error("Error while signing in");
           }
         }
       })
       .catch((error) => {
-        toast.error(error.response.data.detail);
+        if (error.response) {
+          toast.error(error.response.data.detail);
+        } else if (error.request) {
+          toast.error("Network error. Please try again.");
+        } else {
+          toast.error("An error occurred. Please try again.");
+        }
       });
   };
 

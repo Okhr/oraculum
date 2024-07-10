@@ -13,28 +13,34 @@ import {
   Text,
   Link,
 } from "@chakra-ui/react";
+import config from "../../../config.json";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 type FormValues = {
   name: string;
   email: string;
   password: string;
-  passwordConfirm: string;
+  password_confirm: string;
 };
 
 const schema = yup.object().shape({
-  name: yup.string().required("Name is required"),
+  name: yup.string().required("Username is required"),
   email: yup.string().email("Email is invalid").required("Email is required"),
   password: yup
     .string()
     .min(8, "Password must be at least 8 characters")
     .required("Password is required"),
-  passwordConfirm: yup
+  password_confirm: yup
     .string()
     .oneOf([yup.ref("password")], "Passwords must match")
     .required("Confirm Password is required"),
 });
 
 const RegistrationForm = () => {
+  const navigate = useNavigate();
+
   const {
     register,
     handleSubmit,
@@ -44,7 +50,23 @@ const RegistrationForm = () => {
   });
 
   const onSubmit = (data: FormValues) => {
-    console.log(data);
+    axios
+      .post(config.API_URL + "/auth/register", data)
+      .then((response) => {
+        if (response.status === 201) {
+          toast.success("Succesfully registered");
+          navigate("/login");
+        }
+      })
+      .catch((error) => {
+        if (error.response) {
+          toast.error(error.response.data.detail);
+        } else if (error.request) {
+          toast.error("Network error. Please try again.");
+        } else {
+          toast.error("An error occurred. Please try again.");
+        }
+      });
   };
 
   return (
@@ -60,7 +82,7 @@ const RegistrationForm = () => {
         <form onSubmit={handleSubmit(onSubmit)}>
           <VStack spacing={5}>
             <FormControl isInvalid={!!errors.name}>
-              <FormLabel htmlFor="name">Name</FormLabel>
+              <FormLabel htmlFor="name">Username</FormLabel>
               <Input id="name" {...register("name")} />
               <FormErrorMessage>{errors.name?.message}</FormErrorMessage>
             </FormControl>
@@ -74,15 +96,15 @@ const RegistrationForm = () => {
               <Input id="password" type="password" {...register("password")} />
               <FormErrorMessage>{errors.password?.message}</FormErrorMessage>
             </FormControl>
-            <FormControl isInvalid={!!errors.passwordConfirm}>
-              <FormLabel htmlFor="passwordConfirm">Confirm Password</FormLabel>
+            <FormControl isInvalid={!!errors.password_confirm}>
+              <FormLabel htmlFor="password_confirm">Confirm Password</FormLabel>
               <Input
-                id="passwordConfirm"
+                id="password_confirm"
                 type="password"
-                {...register("passwordConfirm")}
+                {...register("password_confirm")}
               />
               <FormErrorMessage>
-                {errors.passwordConfirm?.message}
+                {errors.password_confirm?.message}
               </FormErrorMessage>
             </FormControl>
             <Button type="submit" colorScheme="blue">

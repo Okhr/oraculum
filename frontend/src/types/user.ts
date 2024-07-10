@@ -3,5 +3,5 @@ export interface UserResponseSchema {
     name: string,
     email: string,
     role: string,
-    createdAt: string
+    created_at: string
 }

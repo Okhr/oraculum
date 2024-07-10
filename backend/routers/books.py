@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from ebooklib import epub
@@ -21,8 +22,8 @@ async def create_upload_file(uploaded_file: UploadFile, current_user: Annotated[
     if not os.path.exists(f'data/tmp'):
         os.makedirs(f'data/tmp')
 
-    with open(f'data/tmp/{uploaded_file.filename}', 'wb') as f:
-        f.write(uploaded_file.file.read())
+    with open(f'data/tmp/{uploaded_file.filename}', 'wb') as buffer:
+        shutil.copyfileobj(uploaded_file.file, buffer)
 
     book = epub.read_epub(f'data/tmp/{uploaded_file.filename}')
     book_metadata = extract_book_metadata(book)
@@ -38,3 +39,4 @@ async def create_upload_file(uploaded_file: UploadFile, current_user: Annotated[
         'filename': uploaded_file.filename,
         'user': current_user.name
     }
+    
