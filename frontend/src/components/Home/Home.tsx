@@ -1,10 +1,11 @@
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Button, ButtonGroup, Card, CardBody, CardFooter, Divider, Text } from "@chakra-ui/react";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import useAuthHeader from "react-auth-kit/hooks/useAuthHeader";
 import config from "../../config.json";
 import { useNavigate } from "react-router-dom";
 import { UserResponseSchema } from "../../types/user";
+import Nav from "../Nav/Nav";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -28,17 +29,20 @@ const Home = () => {
   }, [authHeader, navigate, user]);
 
   return (
-    <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" bg="white">
-      <Text fontSize="xl" fontWeight="bold" mb={2}>
-        {user?.name}
-      </Text>
-      <Text fontSize="md" mb={1}>
-        ID: {user?.id}
-      </Text>
-      <Text fontSize="md" mb={1}>
-        Role: {user?.role}
-      </Text>
-      <Text fontSize="md">Created At: {user?.created_at}</Text>
+    <Box display={"flex"}>
+      <Nav activeLink="Home" />
+      <Box flex="1" p={4} bg={"gray.100"}>
+        <Card maxW='sm'>
+          <CardBody>
+            <Text>ID: {user?.id}</Text>
+            <Text>Name: {user?.name}</Text>
+            <Text>Email: {user?.email}</Text>
+            <Text>Role: {user?.role}</Text>
+            <Text>Created At: {user?.created_at}</Text>
+          </CardBody>
+        </Card>
+
+      </Box>
     </Box>
   );
 };

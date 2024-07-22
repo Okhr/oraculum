@@ -13,6 +13,7 @@ import LoginForm from "./components/auth/LoginForm/LoginForm.tsx";
 import Home from "./components/Home/Home.tsx";
 import "./App.css";
 import { Toaster } from "react-hot-toast";
+import Books from "./components/Books/Books.tsx";
 
 const store = createStore({
   authName: "_auth",
@@ -33,6 +34,14 @@ function App() {
               element={
                 <RequireAuth fallbackPath={"/login"}>
                   <Home />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/books"
+              element={
+                <RequireAuth fallbackPath={"/login"}>
+                  <Books />
                 </RequireAuth>
               }
             />

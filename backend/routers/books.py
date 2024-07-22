@@ -1,4 +1,5 @@
 import os
+from pprint import pp
 import shutil
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
@@ -27,7 +28,7 @@ async def create_upload_file(uploaded_file: UploadFile, current_user: Annotated[
 
     book = epub.read_epub(f'data/tmp/{uploaded_file.filename}')
     book_metadata = extract_book_metadata(book)
-    print(book_metadata)
+    pp(book_metadata)
 
     if not os.path.exists(f'data/uploads/{current_user.name}'):
         os.makedirs(f'data/uploads/{current_user.name}')
@@ -39,4 +40,3 @@ async def create_upload_file(uploaded_file: UploadFile, current_user: Annotated[
         'filename': uploaded_file.filename,
         'user': current_user.name
     }
-    
