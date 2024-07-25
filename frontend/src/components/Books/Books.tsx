@@ -1,13 +1,14 @@
-import { Box, Heading, Text, Icon, TableContainer, Table, Thead, Tr, Th, Tbody, Td } from "@chakra-ui/react";
+import { Box, Heading, Text, Icon, TableContainer, Table, Thead, Tr, Th, Tbody, Td, Button, ButtonGroup } from "@chakra-ui/react";
 import { LuUpload } from 'react-icons/lu';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, FileRejection } from 'react-dropzone';
 import Nav from "../Nav/Nav";
 import config from "../../config.json";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { keyframes } from '@emotion/react';
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import useAuthHeader from "react-auth-kit/hooks/useAuthHeader";
+import toast from "react-hot-toast";
 
 const wiggle = keyframes`
   0% { transform: rotate(0deg); }
@@ -27,39 +28,49 @@ const Books = () => {
 
   const navigate = useNavigate();
   const authHeader = useAuthHeader();
+  const [acceptedFiles, setAcceptedFiles] = useState<File[]>([]);
+  const [_, setRejectedFiles] = useState<FileRejection[]>([]);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    const formData = new FormData();
-    formData.append('uploaded_file', file);
+  const onDrop = useCallback((newFiles: File[], rejectedFiles: FileRejection[]) => {
+    setAcceptedFiles(prevAcceptedFiles => [...prevAcceptedFiles, ...newFiles]);
+    setRejectedFiles(prevRejectedFiles => [...prevRejectedFiles, ...rejectedFiles]);
+  }, []);
 
-    axios.post(config.API_URL + '/books/upload/', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': authHeader,
-      },
-    })
-      .then(response => {
-        console.log(response.data);
-        // Handle the response as needed
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { 'application/epub+zip': ['.epub'] } });
+
+  const uploadFiles = () => {
+    for (const file of acceptedFiles) {
+      const formData = new FormData();
+      formData.append('uploaded_file', file);
+
+      axios.post(config.API_URL + '/books/upload/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': authHeader,
+        },
       })
-      .catch(error => {
-        if (error.response.status === 403 || error.response.status === 401) {
-          navigate('/login');
-        }
-        console.error(error);
-        // Handle the error as needed
-      });
-  }, [])
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, maxFiles: 1, accept: { 'application/epub+zip': ['.epub'] } });
+        .then(response => {
+          console.log(response.data.filename);
+          toast.success(`Book "${response.data.filename}" successfully uploaded`);
+        })
+        .catch(error => {
+          if (error.response.status === 403 || error.response.status === 401) {
+            toast.error("You are not authenticated");
+            navigate('/login');
+          }
+          toast.error(error.response.data.detail);
+        });
+    }
+    setAcceptedFiles([]);
+    setRejectedFiles([]);
+  }
 
   return (
     <Box display={"flex"}>
       <Nav activeLink="Books" />
       <Box flex="1" p={4} bg={"gray.100"} height={"100vh"} overflowY={"auto"}>
         <Box maxW={{ base: "100%", md: "768px" }} mx="auto">
-          <Heading size="lg" color={"gray.700"}>Upload a new book</Heading>
+          <Heading size="lg" color={"gray.700"}>Upload new books</Heading>
           <Box my={4}
             {...getRootProps()}
             p={4}
@@ -74,10 +85,29 @@ const Books = () => {
             <Icon as={LuUpload} boxSize={16} mb={4} animation={isDragActive ? `${wiggle} 0.2s infinite` : 'none'} />
             <input {...getInputProps()} />
             {isDragActive ?
-              <Text fontSize='xl'>Drop the file here</Text> :
-              <Text fontSize='xl'>Drag'n drop an epub file here, or click to select a file</Text>
+              <Text fontSize='xl'>Drop the files here</Text> :
+              acceptedFiles.length > 0 ?
+                <Text fontSize='xl'>{acceptedFiles.length} files selected, drop more or click to select more files</Text> :
+                <Text fontSize='xl'>Drop epub files here, or click to select files</Text>
             }
           </Box>
+          {acceptedFiles.length > 0 && (
+            <Box display="flex" justifyContent="flex-end" mb={4}>
+              <ButtonGroup gap='2'>
+                <Button colorScheme='purple' variant='outline' onClick={uploadFiles}>
+                  Upload {acceptedFiles.length} book{acceptedFiles.length > 1 ? 's' : ''}
+                </Button>
+                <Button colorScheme='black' variant='outline' onClick={() => {
+                  setAcceptedFiles([])
+                  setRejectedFiles([])
+                }}>
+                  Cancel Upload
+                </Button>
+              </ButtonGroup>
+            </Box>
+
+          )}
+
           <Heading size="lg" color={"gray.700"}>Book collection</Heading>
           {books.length > 0 ? (
             <TableContainer mt={4} bg="white" borderRadius={8}>
@@ -112,3 +142,4 @@ const Books = () => {
 };
 
 export default Books;
+

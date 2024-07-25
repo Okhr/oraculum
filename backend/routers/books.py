@@ -47,3 +47,13 @@ async def create_upload_file(uploaded_file: UploadFile, current_user: Annotated[
         'user_id': current_user.id,
         'book_id': new_book_file.id
     }
+
+
+@router.get("/uploaded/")
+async def get_uploaded(current_user: Annotated[user_schemas.UserResponseSchema, Depends(get_current_user)], db: Session = Depends(get_db)):
+    books = db.query(BookFile).filter(BookFile.user_id == current_user.id).all()
+
+    if not books:
+        raise HTTPException(status_code=404, detail="No books found for this user")
+
+    return books
