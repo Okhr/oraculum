@@ -4,39 +4,46 @@ import shutil
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from ebooklib import epub
+from sqlalchemy.orm import Session
 
+from ..schemas import users as user_schemas
 from core.parsing import extract_book_metadata
-from .. import schemas, models, hashing
 from ..database import get_db
 from .auth import get_current_user
-
+from ..models.books import BookFile, FileType
 
 router = APIRouter()
 
 
 @router.post("/upload/")
-async def create_upload_file(uploaded_file: UploadFile, current_user: Annotated[schemas.UserResponseSchema, Depends(get_current_user)]):
+async def create_upload_file(uploaded_file: UploadFile, current_user: Annotated[user_schemas.UserResponseSchema, Depends(get_current_user)], db: Session = Depends(get_db)):
 
     if uploaded_file.content_type != 'application/epub+zip':
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f'Content type : {uploaded_file.content_type} is not supported')
 
-    if not os.path.exists(f'data/tmp'):
-        os.makedirs(f'data/tmp')
+    # Add file size checking
+    max_file_size = 100 * 1024 * 1024  # 10 MB
+    if uploaded_file.size > max_file_size:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail='File size exceeds the maximum limit of 100 MB')
 
-    with open(f'data/tmp/{uploaded_file.filename}', 'wb') as buffer:
-        shutil.copyfileobj(uploaded_file.file, buffer)
-
-    book = epub.read_epub(f'data/tmp/{uploaded_file.filename}')
+    book = epub.read_epub(uploaded_file.file)
     book_metadata = extract_book_metadata(book)
-    pp(book_metadata)
 
-    if not os.path.exists(f'data/uploads/{current_user.name}'):
-        os.makedirs(f'data/uploads/{current_user.name}')
-
-    with open(f'data/uploads/{current_user.name}/{book_metadata["title"]}, {book_metadata["creator"]}.epub', 'wb') as f:
-        f.write(uploaded_file.file.read())
-
+    # Create a new BookFile instance and save it to the database
+    new_book_file = BookFile(
+        user_id=current_user.id,
+        file_type=FileType.epub,
+        original_file_name=uploaded_file.filename,
+        file_size=uploaded_file.size,
+        file_data=uploaded_file.file.read(),
+        author=book_metadata["creator"],
+        title=book_metadata["title"]
+    )
+    db.add(new_book_file)
+    db.commit()
+    db.refresh(new_book_file)
     return {
         'filename': uploaded_file.filename,
-        'user': current_user.name
+        'user_id': current_user.id,
+        'book_id': new_book_file.id
     }

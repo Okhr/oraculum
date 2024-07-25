@@ -6,7 +6,10 @@ from sqlalchemy import pool
 from alembic import context
 
 from backend.config import settings
-from backend.models import Base
+
+from backend.database import Base
+from backend.models.books import BookFile
+from backend.models.users import User
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

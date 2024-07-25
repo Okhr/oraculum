@@ -1,7 +1,7 @@
 import uuid
 
-from .database import Base
-from sqlalchemy import TIMESTAMP, Column, String, Boolean, text
+from ..database import Base
+from sqlalchemy import TIMESTAMP, Column, String, text
 from sqlalchemy.dialects.postgresql import UUID
 
 

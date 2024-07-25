@@ -92,12 +92,12 @@ const LoginForm = () => {
           <VStack spacing={5}>
             <FormControl isInvalid={!!errors.username}>
               <FormLabel htmlFor="username">Username</FormLabel>
-              <Input id="username" type="text" {...register("username")} />
+              <Input id="username" type="text" {...register("username")} autoComplete="on" />
               <FormErrorMessage>{errors.username?.message}</FormErrorMessage>
             </FormControl>
             <FormControl isInvalid={!!errors.password}>
               <FormLabel htmlFor="password">Password</FormLabel>
-              <Input id="password" type="password" {...register("password")} />
+              <Input id="password" type="password" {...register("password")} autoComplete="on" />
               <FormErrorMessage>{errors.password?.message}</FormErrorMessage>
             </FormControl>
             <Button type="submit" colorScheme="blue">

@@ -22,16 +22,18 @@ const Home = () => {
         })
         .then((response) => {
           setUser(response.data);
+        }).catch((error) => {
+          console.log(error);
         });
     } else {
       navigate("/login");
     }
-  }, [authHeader, navigate, user]);
+  }, [authHeader, navigate]);
 
   return (
     <Box display={"flex"}>
       <Nav activeLink="Home" />
-      <Box flex="1" p={4} bg={"gray.100"}>
+      <Box flex="1" p={4} bg={"gray.100"} height={"100vh"} overflowY={"auto"}>
         <Card maxW='sm'>
           <CardBody>
             <Text>ID: {user?.id}</Text>
