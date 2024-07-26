@@ -27,7 +27,13 @@ type FormValues = {
 
 const schema = yup.object().shape({
   name: yup.string().required("Username is required"),
-  email: yup.string().email("Email is invalid").required("Email is required"),
+  email: yup
+    .string()
+    .matches(
+      /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+      "Email must be a valid email address"
+    )
+    .required("Email is required"),
   password: yup
     .string()
     .min(8, "Password must be at least 8 characters")
@@ -59,6 +65,7 @@ const RegistrationForm = () => {
         }
       })
       .catch((error) => {
+        console.log(error)
         if (error.response) {
           toast.error(error.response.data.detail);
         } else if (error.request) {
@@ -88,7 +95,7 @@ const RegistrationForm = () => {
             </FormControl>
             <FormControl isInvalid={!!errors.email}>
               <FormLabel htmlFor="email">Email</FormLabel>
-              <Input id="email" type="email" {...register("email")} />
+              <Input id="email" type="text" {...register("email")} />
               <FormErrorMessage>{errors.email?.message}</FormErrorMessage>
             </FormControl>
             <FormControl isInvalid={!!errors.password}>

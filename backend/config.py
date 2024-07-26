@@ -13,7 +13,6 @@ class Settings:
     POSTGRES_USER: str
     POSTGRES_DB: str
     POSTGRES_HOST: str
-    POSTGRES_HOSTNAME: str
 
     SECRET_KEY: str
 

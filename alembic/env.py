@@ -15,7 +15,7 @@ from backend.models.users import User
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_main_option('sqlalchemy.url', f'postgresql+psycopg2://{settings.POSTGRES_USER}@{settings.POSTGRES_HOSTNAME}:{settings.DATABASE_PORT}/{settings.POSTGRES_DB}')
+config.set_main_option('sqlalchemy.url', f'postgresql+psycopg2://{settings.POSTGRES_USER}@{settings.POSTGRES_HOST}:{settings.DATABASE_PORT}/{settings.POSTGRES_DB}')
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
