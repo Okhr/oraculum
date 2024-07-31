@@ -1,10 +1,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends
 
-from ..models import users as user_models
-
 from ..schemas import users as user_schemas
-from .. import hashing
 from ..database import get_db
 from .auth import get_current_user
 

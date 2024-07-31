@@ -1,14 +1,15 @@
-import { Box, Heading, Text, Icon, TableContainer, Table, Thead, Tr, Th, Tbody, Td, Button, ButtonGroup } from "@chakra-ui/react";
-import { LuUpload } from 'react-icons/lu';
-import { useDropzone, FileRejection } from 'react-dropzone';
-import Nav from "../Nav/Nav";
-import config from "../../config.json";
-import { useCallback, useState } from "react";
+import { Box, Button, ButtonGroup, Heading, Icon, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr } from "@chakra-ui/react";
 import { keyframes } from '@emotion/react';
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import useAuthHeader from "react-auth-kit/hooks/useAuthHeader";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useState } from "react";
+import { FileRejection, useDropzone } from 'react-dropzone';
 import toast from "react-hot-toast";
+import { LuUpload } from 'react-icons/lu';
+import { useNavigate } from "react-router-dom";
+import { useGetUploadedBooks, useUploadBook } from '../../apis/books';
+import { BookResponseSchema } from '../../types/books';
+import Nav from "../Nav/Nav";
+import { AxiosError } from "axios";
 
 const wiggle = keyframes`
   0% { transform: rotate(0deg); }
@@ -18,18 +19,36 @@ const wiggle = keyframes`
   100% { transform: rotate(0deg); }
 `;
 
-const books = [
-  { id: 1, title: 'Book 1', author: 'Author 1', uploadDate: '2022-01-01' },
-  { id: 2, title: 'Book 2', author: 'Author 2', uploadDate: '2022-02-01' },
-  { id: 3, title: 'Book 3', author: 'Author 3', uploadDate: '2022-03-01' },
-];
-
 const Books = () => {
-
   const navigate = useNavigate();
-  const authHeader = useAuthHeader();
+
+  const { uploadBook } = useUploadBook();
+  const { getUploadedBooks } = useGetUploadedBooks();
+
   const [acceptedFiles, setAcceptedFiles] = useState<File[]>([]);
   const [_, setRejectedFiles] = useState<FileRejection[]>([]);
+
+  const queryClient = useQueryClient();
+  const { data: uploadedBooks, isLoading, isError } = useQuery({
+    queryKey: ['uploadedBooks'],
+    queryFn: getUploadedBooks,
+  });
+  const uploadMutation = useMutation({
+    mutationFn: uploadBook,
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ['uploadedBooks'] })
+    },
+    onError: (error: AxiosError) => {
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        toast.error('Not authenticated. Please login.');
+        navigate('/login');
+      } else {
+        console.log(error)
+        toast.error("An error occurred");
+      }
+    }
+  })
 
   const onDrop = useCallback((newFiles: File[], rejectedFiles: FileRejection[]) => {
     setAcceptedFiles(prevAcceptedFiles => [...prevAcceptedFiles, ...newFiles]);
@@ -40,26 +59,7 @@ const Books = () => {
 
   const uploadFiles = () => {
     for (const file of acceptedFiles) {
-      const formData = new FormData();
-      formData.append('uploaded_file', file);
-
-      axios.post(config.API_URL + '/books/upload/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': authHeader,
-        },
-      })
-        .then(response => {
-          console.log(response.data.filename);
-          toast.success(`Book "${response.data.filename}" successfully uploaded`);
-        })
-        .catch(error => {
-          if (error.response.status === 403 || error.response.status === 401) {
-            toast.error("You are not authenticated");
-            navigate('/login');
-          }
-          toast.error(error.response.data.detail);
-        });
+      uploadMutation.mutate(file);
     }
     setAcceptedFiles([]);
     setRejectedFiles([]);
@@ -109,7 +109,7 @@ const Books = () => {
           )}
 
           <Heading size="lg" color={"gray.700"}>Book collection</Heading>
-          {books.length > 0 ? (
+          {uploadedBooks && uploadedBooks.length > 0 ? (
             <TableContainer mt={4} bg="white" borderRadius={8}>
               <Table variant='simple'>
                 <Thead>
@@ -120,11 +120,11 @@ const Books = () => {
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {books.map(book => (
+                  {uploadedBooks.map(book => (
                     <Tr key={book.id}>
                       <Td textAlign="center">{book.title}</Td>
                       <Td textAlign="center">{book.author}</Td>
-                      <Td textAlign="center">{book.uploadDate}</Td>
+                      <Td textAlign="center">{book.upload_date}</Td>
                     </Tr>
                   ))}
                 </Tbody>
@@ -132,7 +132,7 @@ const Books = () => {
             </TableContainer>
           ) : (
             <Box mt={4} bg="white" borderRadius={8} p={4} textAlign="center">
-              < Text fontSize='xl' color={"gray.700"}>No books available.</Text>
+              <Text fontSize='xl' color={"gray.700"}>No books available.</Text>
             </Box>
           )}
         </Box>
@@ -142,4 +142,3 @@ const Books = () => {
 };
 
 export default Books;
-

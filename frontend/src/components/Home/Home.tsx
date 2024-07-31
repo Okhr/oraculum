@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import useAuthHeader from "react-auth-kit/hooks/useAuthHeader";
 import config from "../../config.json";
 import { useNavigate } from "react-router-dom";
-import { UserResponseSchema } from "../../types/user";
+import { UserResponseSchema } from "../../types/users";
 import Nav from "../Nav/Nav";
 
 const Home = () => {

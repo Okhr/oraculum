@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { ChakraProvider } from "@chakra-ui/react";
 import AuthProvider from "react-auth-kit";
+import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import RequireAuth from "@auth-kit/react-router/RequireAuth";
 import createStore from "react-auth-kit/createStore";
 import RegistrationForm from "./components/auth/RegistrationForm/RegistrationForm.tsx";
@@ -22,40 +23,44 @@ const store = createStore({
   cookieSecure: window.location.protocol === "https:",
 });
 
+const queryClient = new QueryClient()
+
 function App() {
   return (
-    <AuthProvider store={store}>
-      <ChakraProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<Navigate replace to="/home" />} />
-            <Route
-              path="/home"
-              element={
-                <RequireAuth fallbackPath={"/login"}>
-                  <Home />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/books"
-              element={
-                <RequireAuth fallbackPath={"/login"}>
-                  <Books />
-                </RequireAuth>
-              }
-            />
-            <Route path="/register" element={<RegistrationForm />} />
-            <Route path="/login" element={<LoginForm />} />
-          </Routes>
-        </Router>
-        <Toaster
-          position="top-right"
-          gutter={8}
-          toastOptions={{ duration: 3000 }}
-        />
-      </ChakraProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider store={store}>
+        <ChakraProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Navigate replace to="/home" />} />
+              <Route
+                path="/home"
+                element={
+                  <RequireAuth fallbackPath={"/login"}>
+                    <Home />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/books"
+                element={
+                  <RequireAuth fallbackPath={"/login"}>
+                    <Books />
+                  </RequireAuth>
+                }
+              />
+              <Route path="/register" element={<RegistrationForm />} />
+              <Route path="/login" element={<LoginForm />} />
+            </Routes>
+          </Router>
+          <Toaster
+            position="top-right"
+            gutter={8}
+            toastOptions={{ duration: 3000 }}
+          />
+        </ChakraProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 
