@@ -7,6 +7,7 @@ import {
 import { ChakraProvider } from "@chakra-ui/react";
 import AuthProvider from "react-auth-kit";
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import RequireAuth from "@auth-kit/react-router/RequireAuth";
 import createStore from "react-auth-kit/createStore";
 import RegistrationForm from "./components/auth/RegistrationForm/RegistrationForm.tsx";
@@ -60,6 +61,7 @@ function App() {
           />
         </ChakraProvider>
       </AuthProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

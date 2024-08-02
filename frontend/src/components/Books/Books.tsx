@@ -6,7 +6,7 @@ import { FileRejection, useDropzone } from 'react-dropzone';
 import toast from "react-hot-toast";
 import { LuUpload } from 'react-icons/lu';
 import { useNavigate } from "react-router-dom";
-import { useGetUploadedBooks, useUploadBook } from '../../apis/books';
+import { useDeleteBook, useGetUploadedBooks, useUploadBook } from '../../apis/books';
 import { BookResponseSchema } from '../../types/books';
 import Nav from "../Nav/Nav";
 import { AxiosError } from "axios";
@@ -24,25 +24,58 @@ const Books = () => {
 
   const { uploadBook } = useUploadBook();
   const { getUploadedBooks } = useGetUploadedBooks();
+  const { deleteBook } = useDeleteBook();
 
   const [acceptedFiles, setAcceptedFiles] = useState<File[]>([]);
   const [_, setRejectedFiles] = useState<FileRejection[]>([]);
 
   const queryClient = useQueryClient();
-  const { data: uploadedBooks, isLoading, isError } = useQuery({
+
+  const { data: uploadedBooks } = useQuery({
     queryKey: ['uploadedBooks'],
     queryFn: getUploadedBooks,
   });
+  
   const uploadMutation = useMutation({
     mutationFn: uploadBook,
     onSuccess: () => {
-      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ['uploadedBooks'] })
     },
     onError: (error: AxiosError) => {
-      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-        toast.error('Not authenticated. Please login.');
-        navigate('/login');
+      if (error.response) {
+        if (error.response.status === 401 || error.response.status === 403) {
+          toast.error('Not authenticated. Please login.');
+          navigate('/login');
+        } else if (error.response.status === 409) {
+          toast.error('The book already exists.');
+        } else {
+          console.log(error)
+          toast.error("An error occurred");
+        }
+      } else {
+        console.log(error)
+        toast.error("An error occurred");
+      }
+    }
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteBook,
+    onSuccess: () => {
+      console.log('Book deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['uploadedBooks'] })
+    },
+    onError: (error: AxiosError) => {
+      if (error.response) {
+        if (error.response.status === 401 || error.response.status === 403) {
+          toast.error('Not authenticated. Please login.');
+          navigate('/login');
+        } else if (error.response.status === 404) {
+          toast.error('The book doesn\'t exist');
+        } else {
+          console.log(error)
+          toast.error("An error occurred");
+        }
       } else {
         console.log(error)
         toast.error("An error occurred");
@@ -117,6 +150,7 @@ const Books = () => {
                     <Th textAlign="center">Title</Th>
                     <Th textAlign="center">Author</Th>
                     <Th textAlign="center">Upload Date</Th>
+                    <Th textAlign="center">Actions</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
@@ -125,6 +159,11 @@ const Books = () => {
                       <Td textAlign="center">{book.title}</Td>
                       <Td textAlign="center">{book.author}</Td>
                       <Td textAlign="center">{book.upload_date}</Td>
+                      <Td textAlign="center">
+                        <Button colorScheme='red' variant='outline' size='sm' onClick={() => deleteMutation.mutate(book.id)}>
+                          Delete
+                        </Button>
+                      </Td>
                     </Tr>
                   ))}
                 </Tbody>

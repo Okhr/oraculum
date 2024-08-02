@@ -26,3 +26,4 @@ class BookFile(Base):
     file_data = Column(BYTEA, nullable=False)
     author = Column(String, nullable=False)
     title = Column(String, nullable=False)
+    data_hash = Column(String, nullable=False)

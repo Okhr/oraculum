@@ -38,7 +38,7 @@ export const useGetUploadedBooks = () => {
             },
         };
         try {
-            const response = await axios.get<BookResponseSchema[]>(globalConfig.API_URL + '/books/uploaded/', config);
+            const response = await axios.get<BookResponseSchema[]>(globalConfig.API_URL + '/books/', config);
             return response.data;
         } catch (error) {
             throw error;
@@ -46,4 +46,24 @@ export const useGetUploadedBooks = () => {
     };
 
     return { getUploadedBooks };
+};
+
+export const useDeleteBook = () => {
+    const authHeader = useAuthHeader();
+
+    const deleteBook = async (bookId: string): Promise<BookResponseSchema> => {
+        const config = {
+            headers: {
+                'Authorization': authHeader,
+            },
+        };
+        try {
+            const response = await axios.delete<BookResponseSchema>(globalConfig.API_URL + `/books/delete/${bookId}`, config);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    return { deleteBook };
 };
