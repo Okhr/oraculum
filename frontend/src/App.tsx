@@ -59,9 +59,9 @@ function App() {
             gutter={8}
             toastOptions={{ duration: 3000 }}
           />
+          <ReactQueryDevtools initialIsOpen={false} />
         </ChakraProvider>
       </AuthProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

@@ -22,3 +22,8 @@ class BookResponseSchema(BookBaseSchema):
     id: uuid.UUID
     upload_date: datetime
     file_type: FileType
+
+
+class BookUpdateSchema(BaseModel):
+    author: str = None
+    title: str = None

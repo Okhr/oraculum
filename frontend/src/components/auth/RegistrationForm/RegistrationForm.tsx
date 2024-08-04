@@ -12,6 +12,7 @@ import {
   FormErrorMessage,
   Text,
   Link,
+  Heading,
 } from "@chakra-ui/react";
 import config from "../../../config.json";
 import axios from "axios";
@@ -60,7 +61,7 @@ const RegistrationForm = () => {
       .post(config.API_URL + "/auth/register", data)
       .then((response) => {
         if (response.status === 201) {
-          toast.success("Succesfully registered");
+          toast.success("Successfully registered");
           navigate("/login");
         }
       })
@@ -77,30 +78,51 @@ const RegistrationForm = () => {
   };
 
   return (
-    <Center height="100vh">
+    <Center height="100vh" bg={"gray.100"}>
       <Box
         p={5}
         border="1px"
-        borderColor="gray.200"
+        borderColor="gray.300"
         boxShadow="md"
         rounded="md"
         bg="white"
       >
+        <Heading size="lg" color={"gray.700"} mb={4}>
+          Register
+        </Heading>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <VStack spacing={5}>
+          <VStack spacing={3}>
             <FormControl isInvalid={!!errors.name}>
               <FormLabel htmlFor="name">Username</FormLabel>
-              <Input id="name" {...register("name")} />
+              <Input
+                id="name"
+                type="text"
+                {...register("name")}
+                autoComplete="on"
+                _focus={{ boxShadow: '0 0 0 1px #805AD5', borderColor: '#805AD5' }}
+              />
               <FormErrorMessage>{errors.name?.message}</FormErrorMessage>
             </FormControl>
             <FormControl isInvalid={!!errors.email}>
               <FormLabel htmlFor="email">Email</FormLabel>
-              <Input id="email" type="text" {...register("email")} />
+              <Input
+                id="email"
+                type="text"
+                {...register("email")}
+                autoComplete="on"
+                _focus={{ boxShadow: '0 0 0 1px #805AD5', borderColor: '#805AD5' }}
+              />
               <FormErrorMessage>{errors.email?.message}</FormErrorMessage>
             </FormControl>
             <FormControl isInvalid={!!errors.password}>
               <FormLabel htmlFor="password">Password</FormLabel>
-              <Input id="password" type="password" {...register("password")} />
+              <Input
+                id="password"
+                type="password"
+                {...register("password")}
+                autoComplete="on"
+                _focus={{ boxShadow: '0 0 0 1px #805AD5', borderColor: '#805AD5' }}
+              />
               <FormErrorMessage>{errors.password?.message}</FormErrorMessage>
             </FormControl>
             <FormControl isInvalid={!!errors.password_confirm}>
@@ -109,22 +131,22 @@ const RegistrationForm = () => {
                 id="password_confirm"
                 type="password"
                 {...register("password_confirm")}
+                autoComplete="on"
+                _focus={{ boxShadow: '0 0 0 1px #805AD5', borderColor: '#805AD5' }}
               />
               <FormErrorMessage>
                 {errors.password_confirm?.message}
               </FormErrorMessage>
             </FormControl>
-            <Button type="submit" colorScheme="blue">
+            <Button type="submit" colorScheme="purple">
               Register
             </Button>
-            <Box>
-              <Text>
-                Already have an account?{" "}
-                <Link color="blue.500" href="/login">
-                  Login
-                </Link>
-              </Text>
-            </Box>
+            <Text fontSize="sm">
+              Already have an account?{" "}
+              <Link color="purple.500" href="/login">
+                Login
+              </Link>
+            </Text>
           </VStack>
         </form>
       </Box>
@@ -133,3 +155,4 @@ const RegistrationForm = () => {
 };
 
 export default RegistrationForm;
+

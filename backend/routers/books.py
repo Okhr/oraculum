@@ -86,6 +86,7 @@ async def get_books(
         file_type=book.file_type
     ) for book in books]
 
+
 @router.delete("/delete/{book_id}")
 async def delete_book(
     book_id: uuid.UUID,
@@ -99,6 +100,36 @@ async def delete_book(
 
     db.delete(book)
     db.commit()
+
+    return book_schemas.BookResponseSchema(
+        id=book.id,
+        user_id=book.user_id,
+        author=book.author,
+        title=book.title,
+        upload_date=book.upload_date,
+        file_type=book.file_type
+    )
+
+
+@router.put("/update/{book_id}")
+async def update_book(
+    book_id: uuid.UUID,
+    book_update: book_schemas.BookUpdateSchema,
+    current_user: Annotated[user_schemas.UserResponseSchema, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+) -> book_schemas.BookResponseSchema:
+    book = db.query(BookFile).filter(BookFile.id == book_id, BookFile.user_id == current_user.id).first()
+
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    if book_update.author is not None:
+        book.author = book_update.author
+    if book_update.title is not None:
+        book.title = book_update.title
+
+    db.commit()
+    db.refresh(book)
 
     return book_schemas.BookResponseSchema(
         id=book.id,

@@ -17,3 +17,8 @@ export interface BookResponseSchema extends BookBaseSchema {
     upload_date: string,
     file_type: string
 }
+
+export interface BookUpdateSchema {
+    author?: string,
+    title?: string
+}

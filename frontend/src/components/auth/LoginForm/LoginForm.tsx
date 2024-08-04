@@ -12,6 +12,8 @@ import {
   FormErrorMessage,
   Text,
   Link,
+  Heading,
+  Icon,
 } from "@chakra-ui/react";
 import useSignIn from "react-auth-kit/hooks/useSignIn";
 import config from "../../../config.json";
@@ -19,6 +21,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
+import { LuUpload } from 'react-icons/lu';
 
 type FormValues = {
   username: string;
@@ -79,33 +82,48 @@ const LoginForm = () => {
   };
 
   return (
-    <Center height="100vh">
+    <Center height="100vh" bg={"gray.100"}>
       <Box
         p={5}
         border="1px"
-        borderColor="gray.200"
+        borderColor="gray.300"
         boxShadow="md"
         rounded="md"
         bg="white"
       >
+        <Heading size="lg" color={"gray.700"} mb={4}>
+          Login
+        </Heading>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <VStack spacing={5}>
+          <VStack spacing={3}>
             <FormControl isInvalid={!!errors.username}>
               <FormLabel htmlFor="username">Username</FormLabel>
-              <Input id="username" type="text" {...register("username")} autoComplete="on" />
+              <Input
+                id="username"
+                type="text"
+                {...register("username")}
+                autoComplete="on"
+                _focus={{ boxShadow: '0 0 0 1px #805AD5', borderColor: '#805AD5' }}
+              />
               <FormErrorMessage>{errors.username?.message}</FormErrorMessage>
             </FormControl>
             <FormControl isInvalid={!!errors.password}>
               <FormLabel htmlFor="password">Password</FormLabel>
-              <Input id="password" type="password" {...register("password")} autoComplete="on" />
+              <Input
+                id="password"
+                type="password"
+                {...register("password")}
+                autoComplete="on"
+                _focus={{ boxShadow: '0 0 0 1px #805AD5', borderColor: '#805AD5' }}
+              />
               <FormErrorMessage>{errors.password?.message}</FormErrorMessage>
             </FormControl>
-            <Button type="submit" colorScheme="blue">
+            <Button type="submit" colorScheme="purple">
               Login
             </Button>
             <Text fontSize="sm">
               Not a member?{" "}
-              <Link color="blue.500" href="/register">
+              <Link color="purple.500" href="/register">
                 Register
               </Link>
             </Text>
@@ -117,3 +135,4 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
+
