@@ -15,7 +15,8 @@ export interface BookUploadResponseSchema extends BookBaseSchema {
 export interface BookResponseSchema extends BookBaseSchema {
     id: string,
     upload_date: string,
-    file_type: string
+    file_type: string,
+    cover_image_base64?: string
 }
 
 export interface BookUpdateSchema {

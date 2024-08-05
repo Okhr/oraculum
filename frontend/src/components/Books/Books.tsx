@@ -1,4 +1,4 @@
-import { Box, Button, ButtonGroup, Heading, Icon, IconButton, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr, useDisclosure } from "@chakra-ui/react";
+import { Box, Button, ButtonGroup, Card, CardBody, CardFooter, Heading, HStack, Icon, IconButton, Image, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr, useDisclosure, VStack } from "@chakra-ui/react";
 import { keyframes } from '@emotion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from "react";
@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { LuUpload } from 'react-icons/lu';
 import { useNavigate } from "react-router-dom";
 import { useDeleteBook, useGetUserBooks, useUpdateBook, useUploadBook } from '../../apis/books';
-import { BookResponseSchema, BookUpdateSchema, BookUploadResponseSchema } from '../../types/books';
+import { BookUpdateSchema, BookUploadResponseSchema } from '../../types/books';
 import Nav from "../Nav/Nav";
 import { AxiosError } from "axios";
 import { FaEdit, FaPen, FaTrash } from "react-icons/fa";
@@ -187,54 +187,50 @@ const Books = () => {
 
           <Heading size="lg" color={"gray.700"}>My library</Heading>
           {userBooks && userBooks.length > 0 ? (
-            <Box mt={4} display="flex" flexWrap="wrap" gap={4}>
+            <Box mt={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(200px, 1fr))" gap={4}>
               {userBooks.map(book => (
-                <Box key={book.id} bg="white" borderRadius={8} p={4} flex="1 0 200px" display="flex" flexDirection="column" justifyContent="space-between">
-                  <Box>
-                    <Text fontWeight="bold" textAlign="center" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-                      <Box display="flex" alignItems="center" justifyContent="center">
-                        <Box position="relative" display="inline-block">
-                          {book.title}
-                          <Icon
-                            as={FaPen}
-                            color={"gray.500"}
-                            size={"xs"}
-                            aria-label="Edit book title"
-                            onClick={() => handleEdit(book.id)}
-                            position="absolute"
-                            top="50%"
-                            right="-25px"
-                            transform="translateY(-50%)"
+                <Card key={book.id} borderRadius={8}>
+                  <CardBody>
+                    <HStack spacing='4'>
+                      <Box>
+                        {book.cover_image_base64 ? (
+                          <Image
+                            src={`data:image/jpeg;base64,${book.cover_image_base64}`}
+                            alt={book.title}
+                            borderRadius={4}
+                            boxSize='100px'
+                            objectFit='cover'
                           />
-                        </Box>
+                        ) : (
+                          <Icon as={LuUpload} boxSize={10} color="gray.500" />
+                        )}
                       </Box>
-                    </Text>
-                    <Text textAlign="center" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-                      {book.author}
-                    </Text>
-                    <Text textAlign="center">
-                      {new Date(book.upload_date).toLocaleDateString()}
-                    </Text>
-                  </Box>
-                  <Box display="flex" justifyContent="space-between" mt={4}>
-                    <IconButton
-                      colorScheme="purple"
-                      variant="outline"
-                      size="sm"
-                      aria-label="Edit book"
-                      icon={<FaEdit />}
-                      onClick={() => handleEdit(book.id)}
-                    />
-                    <IconButton
-                      colorScheme='red'
-                      variant='outline'
-                      size='sm'
-                      aria-label='Delete book'
-                      icon={<FaTrash />}
-                      onClick={() => deleteMutation.mutate(book.id)}
-                    />
-                  </Box>
-                </Box>
+                      <VStack align='start'>
+                        <Text fontWeight="bold" fontSize="sm" noOfLines={1}>{book.title}</Text>
+                        <Text fontSize="sm" noOfLines={1}>{book.author}</Text>
+                        <Text fontSize="sm" noOfLines={1}>{new Date(book.upload_date).toLocaleDateString()}</Text>
+                        <ButtonGroup>
+                          <IconButton
+                            colorScheme="purple"
+                            variant="outline"
+                            size="xs"
+                            aria-label="Edit book"
+                            icon={<FaEdit />}
+                            onClick={() => handleEdit(book.id)}
+                          />
+                          <IconButton
+                            colorScheme='red'
+                            variant='outline'
+                            size='xs'
+                            aria-label='Delete book'
+                            icon={<FaTrash />}
+                            onClick={() => deleteMutation.mutate(book.id)}
+                          />
+                        </ButtonGroup>
+                      </VStack>
+                    </HStack>
+                  </CardBody>
+                </Card>
               ))}
             </Box>
           ) : (
@@ -281,3 +277,4 @@ const Books = () => {
 };
 
 export default Books;
+

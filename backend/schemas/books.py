@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel
 import uuid
 from ..models.books import FileType
@@ -22,6 +23,7 @@ class BookResponseSchema(BookBaseSchema):
     id: uuid.UUID
     upload_date: datetime
     file_type: FileType
+    cover_image_base64: Optional[str] = None
 
 
 class BookUpdateSchema(BaseModel):

@@ -27,3 +27,4 @@ class Book(Base):
     author = Column(String, nullable=False)
     title = Column(String, nullable=False)
     data_hash = Column(String, nullable=False)
+    cover_image_base64 = Column(String, nullable=True)

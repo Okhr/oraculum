@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..schemas import books as book_schemas
 from ..schemas import users as user_schemas
-from core.parsing import extract_book_metadata
+from core.parsing import extract_book_metadata, get_cover_image_as_base64
 from ..database import get_db
 from .auth import get_current_user
 from ..models.books import Book, FileType
@@ -32,6 +32,8 @@ async def create_upload_file(
     try:
         book = epub.read_epub(uploaded_file.file)
         book_metadata = extract_book_metadata(book)
+        cover_image_base64 = get_cover_image_as_base64(book)
+        print(cover_image_base64)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'Error processing the file: {str(e)}')
 
@@ -52,7 +54,8 @@ async def create_upload_file(
         file_data=file_data,
         author=book_metadata["creator"],
         title=book_metadata["title"],
-        data_hash=data_hash
+        data_hash=data_hash,
+        cover_image_base64=cover_image_base64
     )
     db.add(new_book_file)
     db.commit()
@@ -83,7 +86,8 @@ async def get_books(
         author=book.author,
         title=book.title,
         upload_date=book.upload_date,
-        file_type=book.file_type
+        file_type=book.file_type,
+        cover_image_base64=book.cover_image_base64
     ) for book in books]
 
 
@@ -107,7 +111,8 @@ async def delete_book(
         author=book.author,
         title=book.title,
         upload_date=book.upload_date,
-        file_type=book.file_type
+        file_type=book.file_type,
+        cover_image_base64=book.cover_image_base64
     )
 
 
@@ -137,5 +142,6 @@ async def update_book(
         author=book.author,
         title=book.title,
         upload_date=book.upload_date,
-        file_type=book.file_type
+        file_type=book.file_type,
+        cover_image_base64=book.cover_image_base64
     )
