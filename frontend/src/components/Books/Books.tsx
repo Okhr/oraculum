@@ -30,8 +30,6 @@ const Books = () => {
   const { deleteBook } = useDeleteBook();
   const { updateBook } = useUpdateBook();
 
-
-
   const queryClient = useQueryClient();
 
   const { data: userBooks } = useQuery({
@@ -245,7 +243,7 @@ const Books = () => {
             </Box>
           )}
 
-          <Modal isOpen={isOpen} onClose={onClose}>
+          <Modal isOpen={isOpen} onClose={onClose} isCentered>
             <ModalOverlay />
             <ModalContent>
               <ModalHeader>Edit Book</ModalHeader>
@@ -262,7 +260,7 @@ const Books = () => {
                   placeholder="Author"
                   value={editedBookContent?.author}
                   onChange={(e) =>
-                    setEditedBookContent((prev) => ({ ...prev!, title: e.target.value }))
+                    setEditedBookContent((prev) => ({ ...prev!, author: e.target.value }))
                   }
                 />
               </ModalBody>

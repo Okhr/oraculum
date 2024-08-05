@@ -8,7 +8,7 @@ from alembic import context
 from backend.config import settings
 
 from backend.database import Base
-from backend.models.books import BookFile
+from backend.models.books import Book
 from backend.models.users import User
 
 # this is the Alembic Config object, which provides

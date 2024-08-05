@@ -11,7 +11,7 @@ from ..schemas import users as user_schemas
 from core.parsing import extract_book_metadata
 from ..database import get_db
 from .auth import get_current_user
-from ..models.books import BookFile, FileType
+from ..models.books import Book, FileType
 
 router = APIRouter()
 
@@ -39,12 +39,12 @@ async def create_upload_file(
     data_hash = hashlib.sha256(file_data).hexdigest()
 
     # Check if the file has been already uploaded by the user
-    existing_book = db.query(BookFile).filter(BookFile.user_id == current_user.id, BookFile.data_hash == data_hash).first()
+    existing_book = db.query(Book).filter(Book.user_id == current_user.id, Book.data_hash == data_hash).first()
     if existing_book:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='File has been already uploaded by this user')
 
     # Create a new BookFile instance and save it to the database
-    new_book_file = BookFile(
+    new_book_file = Book(
         user_id=current_user.id,
         file_type=FileType.epub,
         original_file_name=uploaded_file.filename,
@@ -75,7 +75,7 @@ async def get_books(
     current_user: Annotated[user_schemas.UserResponseSchema, Depends(get_current_user)],
     db: Session = Depends(get_db)
 ) -> list[book_schemas.BookResponseSchema]:
-    books = db.query(BookFile).filter(BookFile.user_id == current_user.id).all()
+    books = db.query(Book).filter(Book.user_id == current_user.id).all()
 
     return [book_schemas.BookResponseSchema(
         id=book.id,
@@ -93,7 +93,7 @@ async def delete_book(
     current_user: Annotated[user_schemas.UserResponseSchema, Depends(get_current_user)],
     db: Session = Depends(get_db)
 ) -> book_schemas.BookResponseSchema:
-    book = db.query(BookFile).filter(BookFile.id == book_id, BookFile.user_id == current_user.id).first()
+    book = db.query(Book).filter(Book.id == book_id, Book.user_id == current_user.id).first()
 
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -118,7 +118,7 @@ async def update_book(
     current_user: Annotated[user_schemas.UserResponseSchema, Depends(get_current_user)],
     db: Session = Depends(get_db)
 ) -> book_schemas.BookResponseSchema:
-    book = db.query(BookFile).filter(BookFile.id == book_id, BookFile.user_id == current_user.id).first()
+    book = db.query(Book).filter(Book.id == book_id, Book.user_id == current_user.id).first()
 
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")

@@ -6,6 +6,7 @@ import ebooklib
 from ebooklib import epub
 import bs4
 from bs4 import BeautifulSoup
+import base64
 
 
 from core.config import parsing as parsing_config
@@ -31,6 +32,35 @@ def extract_book_metadata(book: ebooklib.epub.EpubBook) -> dict[str, str | list[
         'language': book.get_metadata('DC', 'language')[0][0],
         'creator': book.get_metadata('DC', 'creator')[0][0]
     }
+
+
+def get_cover_image_as_base64(book: ebooklib.epub.EpubBook) -> str | None:
+    """Extract the cover image from an EPUB book and return it as a base64 encoded string.
+    If no cover image is found, return None.
+    
+    Parameters
+    ----------
+    book : ebooklib.epub.EpubBook
+        The EPUB book object.
+
+    Returns
+    -------
+    str | None
+        The base64 encoded cover image as a string, or None if no cover image is found.
+    """
+
+    images = list(book.get_items_of_type(ebooklib.ITEM_IMAGE))
+    cover_images = [image for image in images if 'cover' in image.get_name()]
+    if cover_images:
+        cover_image = cover_images[0]
+    elif images:
+        cover_image = images[0]
+    else:
+        return None
+
+    cover_image_data = cover_image.get_content()
+    cover_image_base64 = base64.b64encode(cover_image_data).decode('utf-8')
+    return cover_image_base64
 
 
 def extract_structured_toc(book: ebooklib.epub.EpubBook) -> list[dict[str, str | dict]]:
