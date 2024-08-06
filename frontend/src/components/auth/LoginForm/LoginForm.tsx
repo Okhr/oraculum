@@ -13,7 +13,6 @@ import {
   Text,
   Link,
   Heading,
-  Icon,
 } from "@chakra-ui/react";
 import useSignIn from "react-auth-kit/hooks/useSignIn";
 import config from "../../../config.json";
@@ -21,7 +20,6 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
-import { LuUpload } from 'react-icons/lu';
 
 type FormValues = {
   username: string;

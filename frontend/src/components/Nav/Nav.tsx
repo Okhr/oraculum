@@ -1,5 +1,5 @@
 import { Box, Button, Image, VStack, Spacer, Link, Center, Icon } from '@chakra-ui/react'
-import { FaCog, FaHome, FaChartBar, FaBook } from 'react-icons/fa'; // import icons as needed
+import { FaCog, FaHome, FaChartBar, FaBook } from 'react-icons/fa';
 
 type NavProps = {
   activeLink?: string;

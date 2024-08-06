@@ -1,4 +1,4 @@
-import { Box, Button, ButtonGroup, Card, CardBody, CardFooter, Heading, HStack, Icon, IconButton, Image, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Table, TableContainer, Tbody, Td, Text, Th, Thead, Tr, useDisclosure, VStack } from "@chakra-ui/react";
+import { Box, Button, ButtonGroup, Card, CardBody, Heading, HStack, Icon, Image, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Text, useDisclosure, useMediaQuery, VStack } from "@chakra-ui/react";
 import { keyframes } from '@emotion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from "react";
@@ -9,11 +9,9 @@ import { useNavigate } from "react-router-dom";
 import { useDeleteBook, useGetUserBooks, useUpdateBook, useUploadBook } from '../../apis/books';
 import { BookUpdateSchema, BookUploadResponseSchema } from '../../types/books';
 import Nav from "../Nav/Nav";
+import MobileNav from "../MobileNav/MobileNav";
 import { AxiosError } from "axios";
-import { FaEdit, FaPen, FaTrash } from "react-icons/fa";
-import { string } from "yup";
-import { set } from "react-hook-form";
-
+import { FaPen, FaTrash } from "react-icons/fa";
 const wiggle = keyframes`
   0% { transform: rotate(0deg); }
   25% { transform: rotate(5deg); }
@@ -23,6 +21,7 @@ const wiggle = keyframes`
 `;
 
 const Books = () => {
+  const [isLargerThan768] = useMediaQuery('(min-width: 768px)');
   const navigate = useNavigate();
 
   const { getUserBooks } = useGetUserBooks();
@@ -129,8 +128,9 @@ const Books = () => {
   const [editedBookId, setEditedBookId] = useState<string | null>(null);
   const [editedBookContent, setEditedBookContent] = useState<BookUpdateSchema>({ author: undefined, title: undefined });
 
-  const handleEdit = (bookId: string) => {
+  const handleEdit = (bookId: string, bookContent: BookUpdateSchema) => {
     setEditedBookId(bookId);
+    setEditedBookContent(bookContent);
     onOpen();
   };
 
@@ -143,9 +143,9 @@ const Books = () => {
   };
 
   return (
-    <Box display={"flex"}>
-      <Nav activeLink="Books" />
-      <Box flex="1" p={4} bg={"gray.100"} height={"100vh"} overflowY={"auto"}>
+    <Box display="flex" flexDirection={{ base: "column", md: "row" }}>
+      {isLargerThan768 ? <Nav activeLink="Books" /> : <MobileNav activeLink="Books" />}
+      <Box flex="1" p={4} bg="gray.100" height="100vh" overflowY="auto">
         <Box maxW={{ base: "100%", md: "768px" }} mx="auto">
           <Heading size="lg" color={"gray.700"}>Upload new books</Heading>
           <Box my={4}
@@ -187,47 +187,41 @@ const Books = () => {
 
           <Heading size="lg" color={"gray.700"}>My library</Heading>
           {userBooks && userBooks.length > 0 ? (
-            <Box mt={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(200px, 1fr))" gap={4}>
-              {userBooks.map(book => (
-                <Card key={book.id} borderRadius={8}>
-                  <CardBody>
-                    <HStack spacing='4'>
-                      <Box>
-                        {book.cover_image_base64 ? (
-                          <Image
-                            src={`data:image/jpeg;base64,${book.cover_image_base64}`}
-                            alt={book.title}
-                            borderRadius={4}
-                            boxSize='100px'
-                            objectFit='cover'
-                          />
-                        ) : (
-                          <Icon as={LuUpload} boxSize={10} color="gray.500" />
-                        )}
-                      </Box>
-                      <VStack align='start'>
-                        <Text fontWeight="bold" fontSize="sm" noOfLines={1}>{book.title}</Text>
-                        <Text fontSize="sm" noOfLines={1}>{book.author}</Text>
-                        <Text fontSize="sm" noOfLines={1}>{new Date(book.upload_date).toLocaleDateString()}</Text>
-                        <ButtonGroup>
-                          <IconButton
-                            colorScheme="purple"
-                            variant="outline"
-                            size="xs"
-                            aria-label="Edit book"
-                            icon={<FaEdit />}
-                            onClick={() => handleEdit(book.id)}
-                          />
-                          <IconButton
-                            colorScheme='red'
-                            variant='outline'
-                            size='xs'
-                            aria-label='Delete book'
-                            icon={<FaTrash />}
-                            onClick={() => deleteMutation.mutate(book.id)}
-                          />
-                        </ButtonGroup>
-                      </VStack>
+            <Box mt={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
+              {userBooks.sort((a, b) => new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime()).map(book => (
+                <Card key={book.id} borderRadius={4} overflow="hidden" display="flex" flexDirection="row">
+                  <Image
+                    src={book.cover_image_base64 ? `data:image/jpeg;base64,${book.cover_image_base64}` : "/images/placeholder.jpg"}
+                    alt={book.title}
+                    height="200px"
+                    width="150px"
+                    objectFit='cover'
+                  />
+                  <CardBody flex="1" display="flex" flexDirection="column" justifyContent="space-between" alignItems="flex-end">
+                    <VStack align='end' spacing='2'>
+                      <Text fontWeight="bold" fontSize="md" noOfLines={1}>{book.title}</Text>
+                      <Text fontSize="md" noOfLines={1}>{book.author}</Text>
+                      <Text fontSize="md" noOfLines={1} fontStyle="italic">Uploaded on {new Date(book.upload_date).toLocaleDateString()}</Text>
+                    </VStack>
+                    <HStack spacing={4}>
+                      <Icon
+                        as={FaPen}
+                        boxSize={4}
+                        color="gray.500"
+                        cursor="pointer"
+                        onClick={() => handleEdit(book.id, { author: book.author, title: book.title })}
+                        transition="transform 0.1s ease-in-out"
+                        _hover={{ transform: 'scale(1.2)', color: 'purple.500' }}
+                      />
+                      <Icon
+                        as={FaTrash}
+                        boxSize={4}
+                        color="gray.500"
+                        cursor="pointer"
+                        onClick={() => deleteMutation.mutate(book.id)}
+                        transition="transform 0.1s ease-in-out"
+                        _hover={{ transform: 'scale(1.2)', color: 'red.500' }}
+                      />
                     </HStack>
                   </CardBody>
                 </Card>
@@ -245,23 +239,35 @@ const Books = () => {
               <ModalHeader>Edit Book</ModalHeader>
               <ModalCloseButton />
               <ModalBody>
-                <Input
-                  placeholder="Title"
-                  value={editedBookContent?.title}
-                  onChange={(e) =>
-                    setEditedBookContent((prev) => ({ ...prev!, title: e.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="Author"
-                  value={editedBookContent?.author}
-                  onChange={(e) =>
-                    setEditedBookContent((prev) => ({ ...prev!, author: e.target.value }))
-                  }
-                />
+                <VStack spacing={3} align="stretch">
+                  <Box>
+                    <Text fontSize="sm" fontWeight="bold" mb={1}>Title</Text>
+                    <Input
+                      id="title"
+                      type="text"
+                      value={editedBookContent?.title}
+                      onChange={(e) =>
+                        setEditedBookContent((prev) => ({ ...prev!, title: e.target.value }))
+                      }
+                      _focus={{ boxShadow: '0 0 0 1px #805AD5', borderColor: '#805AD5' }}
+                    />
+                  </Box>
+                  <Box>
+                    <Text fontSize="sm" fontWeight="bold" mb={1}>Author</Text>
+                    <Input
+                      id="author"
+                      type="text"
+                      value={editedBookContent?.author}
+                      onChange={(e) =>
+                        setEditedBookContent((prev) => ({ ...prev!, author: e.target.value }))
+                      }
+                      _focus={{ boxShadow: '0 0 0 1px #805AD5', borderColor: '#805AD5' }}
+                    />
+                  </Box>
+                </VStack>
               </ModalBody>
               <ModalFooter>
-                <Button colorScheme="blue" mr={3} onClick={handleSave}>
+                <Button colorScheme="purple" mr={3} onClick={handleSave}>
                   Save
                 </Button>
                 <Button variant="ghost" onClick={onClose}>
