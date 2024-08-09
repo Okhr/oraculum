@@ -10,9 +10,11 @@ const MobileNav = ({ activeLink }: MobileNavProps) => {
 
   return (
     <Box>
-      <Box bg="white.100" px={4} py={3} display="flex" alignItems="center" justifyContent="space-between" shadow="md">
+      <Box position="fixed" top={0} left={0} right={0} zIndex={1000} bg="white" px={4} py={3} display="flex" alignItems="center" justifyContent="space-between" shadow="md">
         <IconButton icon={<FaBars />} onClick={onOpen} variant="ghost" aria-label="Open Menu" size="lg" />
-        <Image src="/images/logo.png" alt="Logo" width={16} />
+        <Link href="/home">
+          <Image src="/images/logo.png" alt="Logo" width={16} />
+        </Link>
       </Box>
       <Drawer isOpen={isOpen} placement="left" onClose={onClose} size="xs">
         <DrawerOverlay>
@@ -45,7 +47,7 @@ const MobileNav = ({ activeLink }: MobileNavProps) => {
           </DrawerContent>
         </DrawerOverlay>
       </Drawer>
-    </Box>
+    </Box >
   );
 }
 

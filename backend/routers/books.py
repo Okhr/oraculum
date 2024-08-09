@@ -1,4 +1,3 @@
-from pprint import pp
 import hashlib
 from typing import Annotated
 import uuid
@@ -33,7 +32,6 @@ async def create_upload_file(
         book = epub.read_epub(uploaded_file.file)
         book_metadata = extract_book_metadata(book)
         cover_image_base64 = get_cover_image_as_base64(book)
-        print(cover_image_base64)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'Error processing the file: {str(e)}')
 

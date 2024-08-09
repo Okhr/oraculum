@@ -12,6 +12,7 @@ import Nav from "../Nav/Nav";
 import MobileNav from "../MobileNav/MobileNav";
 import { AxiosError } from "axios";
 import { FaPen, FaTrash } from "react-icons/fa";
+
 const wiggle = keyframes`
   0% { transform: rotate(0deg); }
   25% { transform: rotate(5deg); }
@@ -145,8 +146,8 @@ const Books = () => {
   return (
     <Box display="flex" flexDirection={{ base: "column", md: "row" }}>
       {isLargerThan768 ? <Nav activeLink="Books" /> : <MobileNav activeLink="Books" />}
-      <Box flex="1" p={4} bg="gray.100" height="100vh" overflowY="auto">
-        <Box maxW={{ base: "100%", md: "768px" }} mx="auto">
+      <Box flex="1" p={4} mt={isLargerThan768 ? 0 : 20} bg="gray.100" height="100vh" overflowY="auto">
+        <Box maxW={{ base: "100%", md: "5xl" }} mx="auto">
           <Heading size="lg" color={"gray.700"}>Upload new books</Heading>
           <Box my={4}
             {...getRootProps()}
@@ -190,18 +191,26 @@ const Books = () => {
             <Box mt={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
               {userBooks.sort((a, b) => new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime()).map(book => (
                 <Card key={book.id} borderRadius={4} overflow="hidden" display="flex" flexDirection="row">
-                  <Image
-                    src={book.cover_image_base64 ? `data:image/jpeg;base64,${book.cover_image_base64}` : "/images/placeholder.jpg"}
-                    alt={book.title}
-                    height="200px"
-                    width="150px"
-                    objectFit='cover'
-                  />
-                  <CardBody flex="1" display="flex" flexDirection="column" justifyContent="space-between" alignItems="flex-end">
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    p={4}
+                  >
+                    <Image
+                      src={book.cover_image_base64 ? `data:image/jpeg;base64,${book.cover_image_base64}` : "/images/placeholder.jpg"}
+                      alt={book.title}
+                      objectFit='contain'
+                      width="100px"
+                      borderRadius={4}
+                      boxShadow="0 2px 4px rgba(0, 0, 0, 0.2)"
+                    />
+                  </Box>
+                  <CardBody py={4} pl={0} pr={4} flex="1" display="flex" flexDirection="column" justifyContent="space-between" alignItems="flex-end">
                     <VStack align='end' spacing='2'>
-                      <Text fontWeight="bold" fontSize="md" noOfLines={1}>{book.title}</Text>
-                      <Text fontSize="md" noOfLines={1}>{book.author}</Text>
-                      <Text fontSize="md" noOfLines={1} fontStyle="italic">Uploaded on {new Date(book.upload_date).toLocaleDateString()}</Text>
+                      <Text fontWeight="bold" fontSize="md" textAlign="right" noOfLines={2} textOverflow="ellipsis">{book.title}</Text>
+                      <Text fontSize="sm" noOfLines={1} textAlign="right">{book.author}</Text>
+                      <Text fontSize="sm" noOfLines={1} fontStyle="italic" textAlign="right">Uploaded : {new Date(book.upload_date).toLocaleDateString('en-US', { year: '2-digit', month: 'short', day: 'numeric' })}</Text>
                     </VStack>
                     <HStack spacing={4}>
                       <Icon
