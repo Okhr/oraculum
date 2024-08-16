@@ -1,4 +1,4 @@
-import { Box, IconButton, Image, Drawer, DrawerBody, DrawerOverlay, DrawerContent, useDisclosure, VStack, Button, Link, Icon, DrawerHeader, DrawerCloseButton } from '@chakra-ui/react';
+import { Box, IconButton, Image, Drawer, DrawerBody, DrawerOverlay, DrawerContent, useDisclosure, VStack, Button, Link, Icon, DrawerHeader, DrawerCloseButton, Spacer } from '@chakra-ui/react';
 import { FaBars, FaHome, FaChartBar, FaBook, FaCog, FaTimes } from 'react-icons/fa';
 
 type MobileNavProps = {
@@ -23,7 +23,7 @@ const MobileNav = ({ activeLink }: MobileNavProps) => {
               <DrawerCloseButton size="lg" />
             </DrawerHeader>
             <DrawerBody>
-              <VStack align="start" spacing={6}>
+              <VStack align="start" spacing={4} h="100%" w="100%">
                 <Button
                   key={"/home"}
                   as={Link}
@@ -41,7 +41,58 @@ const MobileNav = ({ activeLink }: MobileNavProps) => {
                 >
                   {"Home"}
                 </Button>
-                {/* Add other menu items here */}
+                <Button
+                  key={"/books"}
+                  as={Link}
+                  href={"/books"}
+                  size="md"
+                  width="100%"
+                  color={activeLink === "Books" ? "white" : "gray.700"}
+                  bg={activeLink === "Books" ? "purple.400" : "transparent"}
+                  _hover={{
+                    bg: activeLink === "Books" ? "purple.400" : "purple.100",
+                    textDecoration: 'none'
+                  }}
+                  borderRadius={4}
+                  leftIcon={<Icon as={FaBook} />}
+                >
+                  {"Books"}
+                </Button>
+                <Button
+                  key={"/analysis"}
+                  as={Link}
+                  href={"/analysis"}
+                  size="md"
+                  width="100%"
+                  color={activeLink === "Analysis" ? "white" : "gray.700"}
+                  bg={activeLink === "Analysis" ? "purple.400" : "transparent"}
+                  _hover={{
+                    bg: activeLink === "Analysis" ? "purple.400" : "purple.100",
+                    textDecoration: 'none'
+                  }}
+                  borderRadius={4}
+                  leftIcon={<Icon as={FaChartBar} />}
+                >
+                  {"Analysis"}
+                </Button>
+                <Spacer></Spacer>
+                <Button
+                  key="/settings"
+                  as={Link}
+                  href="/settings"
+                  size="md"
+                  width="100%"
+                  color={activeLink === "Settings" ? "white" : "gray.700"}
+                  bg={activeLink === "Settings" ? "purple.400" : "transparent"}
+                  _hover={{
+                    bg: activeLink === "Settings" ? "purple.400" : "purple.100",
+                    textDecoration: 'none'
+                  }}
+                  borderRadius={4}
+                  leftIcon={<Icon as={FaCog} />}
+                >
+                  Settings
+                </Button>
               </VStack>
             </DrawerBody>
           </DrawerContent>
