@@ -188,7 +188,7 @@ const Books = () => {
 
           <Heading size="lg" color={"gray.700"}>My library</Heading>
           {userBooks && userBooks.length > 0 ? (
-            <Box mt={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
+            <Box mt={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gridAutoRows="1fr" gridGap={4}>
               {userBooks.sort((a, b) => new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime()).map(book => (
                 <Card key={book.id} borderRadius={4} overflow="hidden" display="flex" flexDirection="row">
                   <Box
@@ -208,9 +208,9 @@ const Books = () => {
                   </Box>
                   <CardBody py={4} pl={0} pr={4} flex="1" display="flex" flexDirection="column" justifyContent="space-between" alignItems="flex-end">
                     <VStack align='end' spacing='2'>
-                      <Text fontWeight="bold" fontSize="md" textAlign="right" noOfLines={2} textOverflow="ellipsis">{book.title}</Text>
-                      <Text fontSize="sm" noOfLines={1} textAlign="right">{book.author}</Text>
-                      <Text fontSize="sm" noOfLines={1} fontStyle="italic" textAlign="right">Uploaded : {new Date(book.upload_date).toLocaleDateString('en-US', { year: '2-digit', month: 'short', day: 'numeric' })}</Text>
+                      <Text fontWeight="bold" fontSize="md" textAlign="right">{book.title}</Text>
+                      <Text fontSize="sm" textAlign="right">{book.author}</Text>
+                      <Text fontSize="sm" fontStyle="italic" textAlign="right">Uploaded : {new Date(book.upload_date).toLocaleDateString('en-US', { year: '2-digit', month: 'short', day: 'numeric' })}</Text>
                     </VStack>
                     <HStack spacing={4}>
                       <Icon
