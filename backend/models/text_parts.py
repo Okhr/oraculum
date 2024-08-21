@@ -4,7 +4,8 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql.schema import ForeignKey
 import uuid
 
-class BookPart(Base):
+
+class TextPart(Base):
     __tablename__ = 'book_parts'
     id = Column(UUID(as_uuid=True), primary_key=True, nullable=False, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)

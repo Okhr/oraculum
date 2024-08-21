@@ -9,14 +9,16 @@ export interface BookUploadResponseSchema extends BookBaseSchema {
     upload_date: string,
     file_type: string,
     original_file_name: string,
-    file_size: number
+    file_size: number,
+    is_parsed: boolean
 }
 
 export interface BookResponseSchema extends BookBaseSchema {
     id: string,
     upload_date: string,
     file_type: string,
-    cover_image_base64?: string
+    cover_image_base64?: string,
+    is_parsed: boolean
 }
 
 export interface BookUpdateSchema {

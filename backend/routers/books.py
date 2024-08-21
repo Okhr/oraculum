@@ -4,13 +4,22 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from ebooklib import epub
 from sqlalchemy.orm import Session
+from redis import Redis
+from rq import Queue, Retry
+from sympy import false
 
-from ..schemas import books as book_schemas
-from ..schemas import users as user_schemas
 from core.parsing import extract_book_metadata, get_cover_image_as_base64
-from ..database import get_db
-from .auth import get_current_user
-from ..models.books import Book, FileType
+from task_queue.parsing import extract_text_parts_task
+
+from backend.schemas import books as book_schemas
+from backend.schemas import users as user_schemas
+from backend.database import get_db
+from backend.routers import auth
+from backend.models.books import Book, FileType
+from backend.models.books import Book
+from backend.models.text_parts import TextPart
+
+q = Queue(connection=Redis(host='192.168.1.103'))
 
 router = APIRouter()
 
@@ -18,7 +27,7 @@ router = APIRouter()
 @router.post("/upload/")
 async def create_upload_file(
         uploaded_file: UploadFile,
-        current_user: Annotated[user_schemas.UserResponseSchema, Depends(get_current_user)],
+        current_user: Annotated[user_schemas.UserResponseSchema, Depends(auth.get_current_user)],
         db: Session = Depends(get_db)
 ) -> book_schemas.BookUploadResponseSchema:
 
@@ -59,6 +68,20 @@ async def create_upload_file(
     db.commit()
     db.refresh(new_book_file)
 
+    # Add a task to parse and extract book text_parts
+    q.enqueue(extract_text_parts_task,
+              retry=Retry(max=3, interval=[60]),
+              kwargs={
+                  'book': book,
+                  'user_id': str(current_user.id),
+                  'book_id': str(new_book_file.id),
+              },
+              result_ttl=3.156e7,  # 1 year
+              meta={
+                  'user_id': str(current_user.id),
+                  'book_id': str(new_book_file.id),
+              })
+
     return book_schemas.BookUploadResponseSchema(
         id=new_book_file.id,
         user_id=current_user.id,
@@ -67,13 +90,14 @@ async def create_upload_file(
         upload_date=new_book_file.upload_date,
         file_type=new_book_file.file_type,
         original_file_name=new_book_file.original_file_name,
-        file_size=new_book_file.file_size
+        file_size=new_book_file.file_size,
+        is_parsed=new_book_file.is_parsed,
     )
 
 
 @router.get("/")
 async def get_books(
-    current_user: Annotated[user_schemas.UserResponseSchema, Depends(get_current_user)],
+    current_user: Annotated[user_schemas.UserResponseSchema, Depends(auth.get_current_user)],
     db: Session = Depends(get_db)
 ) -> list[book_schemas.BookResponseSchema]:
     books = db.query(Book).filter(Book.user_id == current_user.id).all()
@@ -85,20 +109,24 @@ async def get_books(
         title=book.title,
         upload_date=book.upload_date,
         file_type=book.file_type,
-        cover_image_base64=book.cover_image_base64
+        cover_image_base64=book.cover_image_base64,
+        is_parsed=book.is_parsed,
     ) for book in books]
 
 
 @router.delete("/delete/{book_id}")
 async def delete_book(
     book_id: uuid.UUID,
-    current_user: Annotated[user_schemas.UserResponseSchema, Depends(get_current_user)],
+    current_user: Annotated[user_schemas.UserResponseSchema, Depends(auth.get_current_user)],
     db: Session = Depends(get_db)
 ) -> book_schemas.BookResponseSchema:
     book = db.query(Book).filter(Book.id == book_id, Book.user_id == current_user.id).first()
 
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
+
+    # Delete all the text_parts associated with the book
+    db.query(TextPart).filter(TextPart.book_id == book_id).delete()
 
     db.delete(book)
     db.commit()
@@ -110,7 +138,8 @@ async def delete_book(
         title=book.title,
         upload_date=book.upload_date,
         file_type=book.file_type,
-        cover_image_base64=book.cover_image_base64
+        cover_image_base64=book.cover_image_base64,
+        is_parsed=book.is_parsed,
     )
 
 
@@ -118,7 +147,7 @@ async def delete_book(
 async def update_book(
     book_id: uuid.UUID,
     book_update: book_schemas.BookUpdateSchema,
-    current_user: Annotated[user_schemas.UserResponseSchema, Depends(get_current_user)],
+    current_user: Annotated[user_schemas.UserResponseSchema, Depends(auth.get_current_user)],
     db: Session = Depends(get_db)
 ) -> book_schemas.BookResponseSchema:
     book = db.query(Book).filter(Book.id == book_id, Book.user_id == current_user.id).first()
@@ -141,5 +170,6 @@ async def update_book(
         title=book.title,
         upload_date=book.upload_date,
         file_type=book.file_type,
-        cover_image_base64=book.cover_image_base64
+        cover_image_base64=book.cover_image_base64,
+        is_parsed=book.is_parsed,
     )

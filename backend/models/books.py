@@ -1,5 +1,5 @@
 from ..database import Base
-from sqlalchemy import TIMESTAMP, Column, String, Integer, text
+from sqlalchemy import TIMESTAMP, Boolean, Column, String, Integer, text
 from sqlalchemy.dialects.postgresql import UUID, BYTEA
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy.sql.sqltypes import Enum
@@ -28,3 +28,4 @@ class Book(Base):
     title = Column(String, nullable=False)
     data_hash = Column(String, nullable=False)
     cover_image_base64 = Column(String, nullable=True)
+    is_parsed = Column(Boolean, nullable=False, server_default=text("false"))

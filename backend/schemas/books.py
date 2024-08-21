@@ -17,6 +17,7 @@ class BookUploadResponseSchema(BookBaseSchema):
     file_type: FileType
     original_file_name: str
     file_size: int
+    is_parsed: bool
 
 
 class BookResponseSchema(BookBaseSchema):
@@ -24,6 +25,7 @@ class BookResponseSchema(BookBaseSchema):
     upload_date: datetime
     file_type: FileType
     cover_image_base64: Optional[str] = None
+    is_parsed: bool
 
 
 class BookUpdateSchema(BaseModel):

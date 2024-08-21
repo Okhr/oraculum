@@ -1,7 +1,7 @@
 import { Box, Button, ButtonGroup, Card, CardBody, Heading, HStack, Icon, Image, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Text, useDisclosure, useMediaQuery, VStack } from "@chakra-ui/react";
 import { keyframes } from '@emotion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FileRejection, useDropzone } from 'react-dropzone';
 import toast from "react-hot-toast";
 import { LuUpload } from 'react-icons/lu';
@@ -11,7 +11,7 @@ import { BookUpdateSchema, BookUploadResponseSchema } from '../../types/books';
 import Nav from "../Nav/Nav";
 import MobileNav from "../MobileNav/MobileNav";
 import { AxiosError } from "axios";
-import { FaPen, FaTrash } from "react-icons/fa";
+import { FaCheck, FaPen, FaSpinner, FaTrash } from "react-icons/fa";
 
 const wiggle = keyframes`
   0% { transform: rotate(0deg); }
@@ -19,6 +19,18 @@ const wiggle = keyframes`
   50% { transform: rotate(-5deg); }
   75% { transform: rotate(5deg); }
   100% { transform: rotate(0deg); }
+`;
+
+const up = keyframes`
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0);
+  }
 `;
 
 const Books = () => {
@@ -32,10 +44,22 @@ const Books = () => {
 
   const queryClient = useQueryClient();
 
-  const { data: userBooks } = useQuery({
+  const { data: userBooks, isError: isUserBooksError, error: userBooksError } = useQuery({
     queryKey: ['userBooks'],
     queryFn: getUserBooks,
+    refetchInterval: 10000,
   });
+
+  useEffect(() => {
+    if (isUserBooksError) {
+      if (userBooksError instanceof AxiosError && (userBooksError.response?.status === 401 || userBooksError.response?.status === 403)) {
+        toast.error('Not authenticated. Please login.');
+        navigate('/login');
+      } else {
+        console.error('Error fetching user books:', userBooksError);
+      }
+    }
+  }, [isUserBooksError, userBooksError, navigate]);
 
   const uploadMutation = useMutation({
     mutationFn: uploadBook,
@@ -190,18 +214,25 @@ const Books = () => {
           {userBooks && userBooks.length > 0 ? (
             <Box mt={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
               {userBooks.sort((a, b) => new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime()).map(book => (
-                <Card key={book.id} borderRadius={4} overflow="hidden" display="flex" flexDirection="row">
+                <Card key={book.id} borderRadius={4} overflow="hidden" display="flex" flexDirection="row" height={"200px"}>
                   <Box
                     display="flex"
                     alignItems="center"
                     justifyContent="center"
                     p={4}
+                    height={"100%"}
+                    width={"150px"}
+                    overflow="hidden"
                   >
-                    <Image
-                      src={book.cover_image_base64 ? `data:image/jpeg;base64,${book.cover_image_base64}` : "/images/placeholder.jpg"}
-                      alt={book.title}
-                      objectFit='contain'
-                      width="100px"
+                    <Box
+                      style={{
+                        backgroundImage: book.cover_image_base64 ? `url(data:image/jpeg;base64,${book.cover_image_base64})` : 'url(/images/placeholder.jpg)'
+                      }}
+                      backgroundSize="100% 100%"
+                      backgroundRepeat="no-repeat"
+                      backgroundPosition="center"
+                      width="100%"
+                      height="100%"
                       borderRadius={4}
                       boxShadow="0 2px 4px rgba(0, 0, 0, 0.2)"
                     />
@@ -213,7 +244,20 @@ const Books = () => {
                       <Text fontSize="sm" fontStyle="italic" textAlign="right">Uploaded : {new Date(book.upload_date).toLocaleDateString('en-US', { year: '2-digit', month: 'short', day: 'numeric' })}</Text>
                     </VStack>
                     <HStack spacing={4}>
-                      <Icon
+                      {book.is_parsed ? (
+                        <Text fontSize="sm" color="gray.500">
+                          <Icon as={FaCheck} boxSize={3} color="gray.500" /> Extracted
+                        </Text>
+                      ) : (
+                        <Text fontSize="sm" color="gray.500">
+                          Extracting
+                          <Text as="span" animation={`${up} 1s infinite`} display="inline-block" mx={1}>.</Text>
+                          <Text as="span" animation={`${up} 1s infinite 0.2s`} display="inline-block" mr={1}>.</Text>
+                          <Text as="span" animation={`${up} 1s infinite 0.4s`} display="inline-block" mr={1}>.</Text>
+                        </Text>
+                      )
+                      }
+                      < Icon
                         as={FaPen}
                         boxSize={4}
                         color="gray.500"
