@@ -30,3 +30,4 @@ dependencies:
   - rq
   - pip:
       - weaviate-client
+      - rq-dashboard
