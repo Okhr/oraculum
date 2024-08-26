@@ -1,5 +1,6 @@
-import { Box, IconButton, Image, Drawer, DrawerBody, DrawerOverlay, DrawerContent, useDisclosure, VStack, Button, Link, Icon, DrawerHeader, DrawerCloseButton, Spacer } from '@chakra-ui/react';
-import { FaBars, FaHome, FaChartBar, FaBook, FaCog, FaTimes } from 'react-icons/fa';
+import { Box, Button, Image, VStack, Spacer, Link, Icon, useDisclosure, IconButton, Drawer, DrawerOverlay, DrawerContent, DrawerHeader, DrawerCloseButton, DrawerBody } from '@chakra-ui/react'
+import { FaBars, FaCog, FaGhost, FaMountain } from 'react-icons/fa';
+import { IoLibrary } from 'react-icons/io5';
 
 type MobileNavProps = {
   activeLink?: string;
@@ -12,7 +13,7 @@ const MobileNav = ({ activeLink }: MobileNavProps) => {
     <Box>
       <Box position="fixed" top={0} left={0} right={0} zIndex={1000} bg="white" px={4} py={3} display="flex" alignItems="center" justifyContent="space-between" shadow="md">
         <IconButton icon={<FaBars />} onClick={onOpen} variant="ghost" aria-label="Open Menu" size="lg" />
-        <Link href="/home">
+        <Link href="/library">
           <Image src="/images/logo.png" alt="Logo" width={16} />
         </Link>
       </Box>
@@ -25,57 +26,58 @@ const MobileNav = ({ activeLink }: MobileNavProps) => {
             <DrawerBody>
               <VStack align="start" spacing={4} h="100%" w="100%">
                 <Button
-                  key={"/home"}
+                  key={"/library"}
                   as={Link}
-                  href={"/home"}
+                  href={"/library"}
                   size="md"
                   width="100%"
-                  color={activeLink === "Home" ? "white" : "gray.700"}
-                  bg={activeLink === "Home" ? "purple.400" : "transparent"}
+                  color={activeLink === "Library" ? "white" : "gray.700"}
+                  bg={activeLink === "Library" ? "purple.400" : "transparent"}
                   _hover={{
-                    bg: activeLink === "Home" ? "purple.400" : "purple.100",
+                    bg: activeLink === "Library" ? "purple.400" : "purple.100",
                     textDecoration: 'none'
                   }}
                   borderRadius={4}
-                  leftIcon={<Icon as={FaHome} />}
+                  leftIcon={<Icon as={IoLibrary} />}
                 >
-                  {"Home"}
+                  {"Library"}
+                </Button>
+                <Box height="1px" width="100%" bg="gray.400" my={4} />
+                <Button
+                  key={"/characters"}
+                  as={Link}
+                  href={"/characters"}
+                  size="md"
+                  width="100%"
+                  color={activeLink === "Characters" ? "white" : "gray.700"}
+                  bg={activeLink === "Characters" ? "purple.400" : "transparent"}
+                  _hover={{
+                    bg: activeLink === "Characters" ? "purple.400" : "purple.100",
+                    textDecoration: 'none'
+                  }}
+                  borderRadius={4}
+                  leftIcon={<Icon as={FaGhost} />}
+                >
+                  {"Characters"}
                 </Button>
                 <Button
-                  key={"/books"}
+                  key={"/locations"}
                   as={Link}
-                  href={"/books"}
+                  href={"/locations"}
                   size="md"
                   width="100%"
-                  color={activeLink === "Books" ? "white" : "gray.700"}
-                  bg={activeLink === "Books" ? "purple.400" : "transparent"}
+                  color={activeLink === "Locations" ? "white" : "gray.700"}
+                  bg={activeLink === "Locations" ? "purple.400" : "transparent"}
                   _hover={{
-                    bg: activeLink === "Books" ? "purple.400" : "purple.100",
+                    bg: activeLink === "Locations" ? "purple.400" : "purple.100",
                     textDecoration: 'none'
                   }}
                   borderRadius={4}
-                  leftIcon={<Icon as={FaBook} />}
+                  leftIcon={<Icon as={FaMountain} />}
                 >
-                  {"Books"}
+                  {"Locations"}
                 </Button>
-                <Button
-                  key={"/analysis"}
-                  as={Link}
-                  href={"/analysis"}
-                  size="md"
-                  width="100%"
-                  color={activeLink === "Analysis" ? "white" : "gray.700"}
-                  bg={activeLink === "Analysis" ? "purple.400" : "transparent"}
-                  _hover={{
-                    bg: activeLink === "Analysis" ? "purple.400" : "purple.100",
-                    textDecoration: 'none'
-                  }}
-                  borderRadius={4}
-                  leftIcon={<Icon as={FaChartBar} />}
-                >
-                  {"Analysis"}
-                </Button>
-                <Spacer></Spacer>
+                <Spacer />
                 <Button
                   key="/settings"
                   as={Link}
@@ -104,3 +106,4 @@ const MobileNav = ({ activeLink }: MobileNavProps) => {
 
 
 export default MobileNav;
+

@@ -1,4 +1,4 @@
-import { Box, Button, ButtonGroup, Card, CardBody, Heading, HStack, Icon, Image, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Text, useDisclosure, useMediaQuery, VStack } from "@chakra-ui/react";
+import { Box, Button, ButtonGroup, Card, CardBody, Heading, HStack, Icon, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Text, useDisclosure, useMediaQuery, VStack } from "@chakra-ui/react";
 import { keyframes } from '@emotion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from "react";
@@ -8,10 +8,11 @@ import { LuUpload } from 'react-icons/lu';
 import { useNavigate } from "react-router-dom";
 import { useDeleteBook, useGetUserBooks, useUpdateBook, useUploadBook } from '../../apis/books';
 import { BookUpdateSchema, BookUploadResponseSchema } from '../../types/books';
-import Nav from "../Nav/Nav";
-import MobileNav from "../MobileNav/MobileNav";
+import Nav from "../navigation/Nav";
+import MobileNav from "../navigation/MobileNav";
 import { AxiosError } from "axios";
-import { FaCheck, FaPen, FaSpinner, FaTrash } from "react-icons/fa";
+import { FaCheck, FaPen, FaTrash } from "react-icons/fa";
+import BookSelector from "../state/BookSelector";
 
 const wiggle = keyframes`
   0% { transform: rotate(0deg); }
@@ -169,7 +170,7 @@ const Books = () => {
 
   return (
     <Box display="flex" flexDirection={{ base: "column", md: "row" }}>
-      {isLargerThan768 ? <Nav activeLink="Books" /> : <MobileNav activeLink="Books" />}
+      {isLargerThan768 ? <Nav activeLink="Library" /> : <MobileNav activeLink="Library" />}
       <Box flex="1" p={4} mt={isLargerThan768 ? 0 : 20} bg="gray.100" height="100vh" overflowY="auto">
         <Box maxW={{ base: "100%", md: "5xl" }} mx="auto">
           <Heading size="lg" color={"gray.700"}>Upload new books</Heading>
@@ -210,9 +211,12 @@ const Books = () => {
 
           )}
 
+          <Heading size="lg" color={"gray.700"}>Current Book</Heading>
+          <BookSelector />
+
           <Heading size="lg" color={"gray.700"}>My library</Heading>
           {userBooks && userBooks.length > 0 ? (
-            <Box mt={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
+            <Box my={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
               {userBooks.sort((a, b) => new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime()).map(book => (
                 <Card key={book.id} borderRadius={4} overflow="hidden" display="flex" flexDirection="row" height={"200px"}>
                   <Box
@@ -246,7 +250,7 @@ const Books = () => {
                     <HStack spacing={4}>
                       {book.is_parsed ? (
                         <Text fontSize="sm" color="gray.500">
-                          <Icon as={FaCheck} boxSize={3} color="gray.500" /> Extracted
+                          <Icon as={FaCheck} boxSize={3} color="gray.500" transform="translateY(1px)" /> Extracted
                         </Text>
                       ) : (
                         <Text fontSize="sm" color="gray.500">

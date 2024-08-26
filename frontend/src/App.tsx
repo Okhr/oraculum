@@ -10,12 +10,11 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import RequireAuth from "@auth-kit/react-router/RequireAuth";
 import createStore from "react-auth-kit/createStore";
-import RegistrationForm from "./components/auth/RegistrationForm/RegistrationForm.tsx";
-import LoginForm from "./components/auth/LoginForm/LoginForm.tsx";
-import Home from "./components/Home/Home.tsx";
+import RegistrationForm from "./components/auth/RegistrationForm.tsx";
+import LoginForm from "./components/auth/LoginForm.tsx";
 import "./App.css";
 import { Toaster } from "react-hot-toast";
-import Books from "./components/Books/Books.tsx";
+import Books from "./components/pages/Books.tsx";
 
 const store = createStore({
   authName: "_auth",
@@ -33,17 +32,25 @@ function App() {
         <ChakraProvider>
           <Router>
             <Routes>
-              <Route path="/" element={<Navigate replace to="/home" />} />
+              <Route path="/" element={<Navigate replace to="/library" />} />
               <Route
-                path="/home"
+                path="/library"
                 element={
                   <RequireAuth fallbackPath={"/login"}>
-                    <Home />
+                    <Books />
                   </RequireAuth>
                 }
               />
               <Route
-                path="/books"
+                path="/characters"
+                element={
+                  <RequireAuth fallbackPath={"/login"}>
+                    <Books />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/locations"
                 element={
                   <RequireAuth fallbackPath={"/login"}>
                     <Books />
