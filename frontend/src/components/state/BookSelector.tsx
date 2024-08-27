@@ -49,7 +49,9 @@ const BookSelector = () => {
                         option: (provided, state) => ({
                             ...provided,
                             color: state.isSelected ? 'white' : 'gray.700',
-                            backgroundColor: state.isSelected ? 'transparent' : 'transparent',
+                            _selected: {
+                                backgroundColor: state.isSelected ? 'purple.400' : 'transparent',
+                            },
                             _hover: {
                                 backgroundColor: state.isSelected ? 'purple.400' : 'gray.100',
                             },
