@@ -6,29 +6,29 @@ from backend.models.text_parts import TextPart
 from core.parsing import extract_structured_toc
 
 
-def extract_text_parts_task(book: ebooklib.epub.EpubBook, user_id: str, book_id: str):
+def extract_text_parts_task(book: ebooklib.epub.EpubBook, book_id: str):
     content = extract_structured_toc(book)
     db = SessionLocal()
 
     try:
-        def iterate_text_parts(node, parent_id=None):
+        def iterate_text_parts(node, sibling_index, parent_id=None):
             book_part = TextPart(
-                user_id=user_id,
                 book_id=book_id,
                 parent_id=parent_id,
                 toc_id=node['id'],
                 label=node['label'],
-                content=node['content']
+                content=node['content'],
+                sibling_index=sibling_index,
             )
 
             db.add(book_part)
             db.commit()
 
-            for child in node['children']:
-                iterate_text_parts(child, parent_id=book_part.id)
+            for i, child in enumerate(node['children']):
+                iterate_text_parts(child, i, parent_id=book_part.id)
 
-        for part in content:
-            iterate_text_parts(part)
+        for i, part in enumerate(content):
+            iterate_text_parts(part, i)
 
         # Update the is_parsed property
         book_to_update = db.query(Book).filter(Book.id == book_id).first()

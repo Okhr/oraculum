@@ -1,66 +1,79 @@
-import { useQuery } from '@tanstack/react-query';
-import { useGetUserBooks } from '../../apis/books';
-import { Spinner, Alert, AlertIcon, AlertTitle, AlertDescription, Box } from '@chakra-ui/react';
+import { Box } from '@chakra-ui/react';
 import { Select as ChakraSelect } from 'chakra-react-select';
+import { BookResponseSchema } from '../../types/books';
+import { useEffect, useState } from 'react';
 
-const BookSelector = () => {
-    const { getUserBooks } = useGetUserBooks();
-    const { data: userBooks, isLoading, isError, error } = useQuery({
-        queryKey: ['userBooks'],
-        queryFn: getUserBooks,
-        refetchInterval: 10000,
-    });
+interface BookSelectorProps {
+  userBooks: BookResponseSchema[];
+}
 
-    const handleBookChange = (selectedOption: any) => {
-        localStorage.setItem('selectedBook', selectedOption.value);
+const BookSelector = ({ userBooks }: BookSelectorProps) => {
+
+  const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
+
+  const handleBookChange = (selectedOption: any) => {
+    localStorage.setItem('selectedBookId', selectedOption.value);
+    setSelectedBookId(selectedOption.value);
+  }
+
+  useEffect(() => {
+    const storedBookId = localStorage.getItem('selectedBookId');
+    if (storedBookId && userBooks.some(book => book.id === storedBookId)) {
+      setSelectedBookId(storedBookId);
+    } else {
+      localStorage.removeItem('selectedBookId');
+      setSelectedBookId(null);
     }
+  }, [userBooks]);
 
-    return (
-        <Box my={4}>
-            {isLoading && <Spinner />}
-            {isError && (
-                <Alert status='error'>
-                    <AlertIcon />
-                    <AlertTitle>Error!</AlertTitle>
-                    <AlertDescription>{error.message}</AlertDescription>
-                </Alert>
-            )}
-            {userBooks && (
-                <ChakraSelect
-                    placeholder="Select book"
-                    onChange={handleBookChange}
-                    options={userBooks.map((book) => ({
-                        value: book.id,
-                        label: `📖${book.title} ✒️${book.author}`,
-                    }))}
-                    chakraStyles={{
-                        control: (provided) => ({
-                            ...provided,
-                            borderColor: 'gray.400',
-                            borderWidth: '2px',
-                            _hover: {
-                                borderColor: 'purple.400',
-                            },
-                            _focus: {
-                                borderColor: 'purple.400',
-                                boxShadow: 'none',
-                            },
-                        }),
-                        option: (provided, state) => ({
-                            ...provided,
-                            color: state.isSelected ? 'white' : 'gray.700',
-                            _selected: {
-                                backgroundColor: state.isSelected ? 'purple.400' : 'transparent',
-                            },
-                            _hover: {
-                                backgroundColor: state.isSelected ? 'purple.400' : 'gray.100',
-                            },
-                        }),
-                    }}
-                />
-            )}
-        </Box>
-    )
+  return (
+    <Box my={4}>
+      {userBooks && (
+        <ChakraSelect
+          placeholder="Select book"
+          onChange={handleBookChange}
+          options={
+            userBooks.map((book) => ({
+              value: book.id,
+              label: book.title,
+            }))
+          }
+          value={
+            selectedBookId
+              ? {
+                value: selectedBookId,
+                label: userBooks.find((book) => book.id === selectedBookId)?.title || 'Book not found',
+              }
+              : null
+          }
+          chakraStyles={{
+            control: (provided) => ({
+              ...provided,
+              borderColor: 'gray.400',
+              borderWidth: '2px',
+              _hover: {
+                borderColor: 'purple.400',
+              },
+              _focus: {
+                borderColor: 'purple.400',
+                boxShadow: 'none',
+              },
+            }),
+            option: (provided, state) => ({
+              ...provided,
+              color: state.isSelected ? 'white' : 'gray.700',
+              _selected: {
+                backgroundColor: 'purple.400',
+              },
+              _hover: {
+                backgroundColor: state.isSelected ? 'purple.400' : 'gray.100',
+              },
+            }),
+          }}
+        />
+      )}
+    </Box>
+  )
 };
 
 export default BookSelector;

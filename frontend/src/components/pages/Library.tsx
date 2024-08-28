@@ -1,7 +1,7 @@
 import { Box, Button, ButtonGroup, Card, CardBody, Heading, HStack, Icon, Input, Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, Text, useDisclosure, useMediaQuery, VStack } from "@chakra-ui/react";
 import { keyframes } from '@emotion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { FileRejection, useDropzone } from 'react-dropzone';
 import toast from "react-hot-toast";
 import { LuUpload } from 'react-icons/lu';
@@ -34,7 +34,7 @@ const up = keyframes`
   }
 `;
 
-const Books = () => {
+const Library = () => {
   const [isLargerThan768] = useMediaQuery('(min-width: 768px)');
   const navigate = useNavigate();
 
@@ -45,22 +45,11 @@ const Books = () => {
 
   const queryClient = useQueryClient();
 
-  const { data: userBooks, isError: isUserBooksError, error: userBooksError } = useQuery({
+  const { data: userBooks } = useQuery({
     queryKey: ['userBooks'],
     queryFn: getUserBooks,
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
-
-  useEffect(() => {
-    if (isUserBooksError) {
-      if (userBooksError instanceof AxiosError && (userBooksError.response?.status === 401 || userBooksError.response?.status === 403)) {
-        toast.error('Not authenticated. Please login.');
-        navigate('/login');
-      } else {
-        console.error('Error fetching user books:', userBooksError);
-      }
-    }
-  }, [isUserBooksError, userBooksError, navigate]);
 
   const uploadMutation = useMutation({
     mutationFn: uploadBook,
@@ -211,8 +200,12 @@ const Books = () => {
 
           )}
 
-          <Heading size="lg" color={"gray.700"}>Current Book</Heading>
-          <BookSelector />
+          {userBooks && userBooks.length > 0 && (
+            <>
+              <Heading size="lg" color={"gray.700"}>Current Book</Heading>
+              <BookSelector userBooks={userBooks} />
+            </>
+          )}
 
           <Heading size="lg" color={"gray.700"}>My library</Heading>
           {userBooks && userBooks.length > 0 ? (
@@ -339,5 +332,5 @@ const Books = () => {
   );
 };
 
-export default Books;
+export default Library;
 

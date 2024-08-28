@@ -1,12 +1,13 @@
 import hashlib
+import os
 from typing import Annotated
 import uuid
+import dotenv
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from ebooklib import epub
 from sqlalchemy.orm import Session
 from redis import Redis
 from rq import Queue, Retry
-from sympy import false
 
 from core.parsing import extract_book_metadata, get_cover_image_as_base64
 from task_queue.parsing import extract_text_parts_task
@@ -19,7 +20,9 @@ from backend.models.books import Book, FileType
 from backend.models.books import Book
 from backend.models.text_parts import TextPart
 
-q = Queue(connection=Redis(host='192.168.1.103'))
+dotenv.load_dotenv()
+
+q = Queue(connection=Redis(host=os.environ.get("REDIS_HOST"), port=os.environ.get("REDIS_PORT")))
 
 router = APIRouter()
 
@@ -73,7 +76,6 @@ async def create_upload_file(
               retry=Retry(max=3, interval=[60]),
               kwargs={
                   'book': book,
-                  'user_id': str(current_user.id),
                   'book_id': str(new_book_file.id),
               },
               result_ttl=3.156e7,  # 1 year
