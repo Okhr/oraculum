@@ -1,0 +1,10 @@
+{
+  "summarization_prompt": {
+    "prompt": "You will be given a part of a book chapter between the <TEXT_PART> and </TEXT_PART> tags, you will summarize the actions that occur in that text. You will only output the summary, nothing else, keep it brief and factual.\n<TEXT_PART>\n{text_part}\n</TEXT_PART>",
+    "variables": ["text_part"]
+  },
+  "entity_summarization_prompt": {
+    "prompt": "You will be given a part of a book chapter between the <TEXT_PART> and </TEXT_PART> tags.\nYou will extract every named entity in that text and classify them as PERSON, LOCATION, ORGANIZATION or CONCEPT.\nHere is a description of each entity type\nPERSON: any character, can be human or not, real or imaginary\nLOCATION: any physical location, can be any type of place, that is specific to the story\nORGANIZATION: any group a people that operates as a cohesive unit under a specific name\nCONCEPT: notion or idea specific to the story\n\nYou will also add a short sentence about new information that we can gain about the entity by reading the text part, adopt a confident tone, don't re write the entity name at the beginning of the description. Write this as if it were an entry in an encyclopedia, in English.\n\nDon't add any external knowledge.\nIf there is no entity in the text, output an empty JSON list.\nYou will output your answer in the following JSON format:\n[{\"entity\": \"<entity_name>\", \"category\": \"<entity_category>\", \"summary\": \"<summary_of_what_we_learn>\" }, ... ]\n\n<TEXT_PART>\n{text_part}\n</TEXT_PART>",
+    "variables": ["text_part"]
+  }
+}

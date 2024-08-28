@@ -1,0 +1,13 @@
+{
+  "summarization_prompt": {
+    "prompt": "Je vais te donner un extrait de chapitre de livre entre les balises <TEXT_PART> et </TEXT_PART>. Je veux que tu résumes les actions qui se déroulent dans ce texte. Tu ne fourniras que le résumé, rien d'autre, garde-le bref et factuel.\n<TEXT_PART>\n{text_part}\n</TEXT_PART>",
+    "variables": ["text_part"]
+  },
+  "entity_summarization_with_kb_prompt": {
+    "prompt": "Je vais te donner un extrait de chapitre de livre entre les balises <TEXT_PART> et </TEXT_PART>.\nTu extrairas toutes les entités nommées dans ce texte et les classeras comme PERSON, LOCATION, ORGANIZATION ou CONCEPT. N'extrais que les entités spécifiques à l'histoire.\nVoici une description de chaque type d'entité :\n\nPERSON : tout personnage, peut être humain ou non, réel ou imaginaire\nLOCATION : tout lieu physique, de tout type, qui est spécifique à l'histoire\nORGANIZATION : tout groupe de personnes qui représente une unité cohérente sous un nom spécifique\nCONCEPT : notion ou idée spécifique à l'histoire\n\nTu ajouteras également une courte phrase sur les nouvelles informations que l'on peut obtenir sur l'entité et sur son rôle et les actions qu'elle éxecute dans l'extrait. Adopte un ton assuré, ne réécris pas le nom de l'entité au début de la description. Rédige comme si c'était un article d'encyclopédie, en français. N'ajoute aucune appréciation ou commentaire, contente toi des faits.\n\nN'ajoute aucune connaissance externe.\n\nJe vais également te donner une base de connaissances des entités extaites précédement entre les balises <KNOWLEDGE_BASE> et </KNOWLEDGE_BASE>, si une entité de ce texte correspond à une entité de la base de connaissances, réutilise le même nom que dans celle-ci, si l'entité est appellée par un autre nom dans le texte, ajoute ce nom à la liste des noms alternatifs de l'entité.\n\nS'il n'y a pas d'entité dans le texte, produis une liste JSON vide. Tu fourniras ta réponse au format JSON suivant :\n\n[{{\"entity\": \"<nom_de_l_entité_1>\", \"alternative_names\": [\"<nom_alternatif_a>\", \"<nom_alternatif_b>\"], \"category\": \"<categorie_de_l_entité_1>\", \"summary\": \"<résumé_des_informations_sur_l_entité_1>\" }}, {{\"entity\": \"<nom_de_l_entité_2>\", \"alternative_names\": [], \"category\": \"<categorie_de_l_entité_2>\", \"summary\": \"<résumé_des_informations_sur_l_entité_2>\" }} ... ]\n\n<KNOWLEDGE_BASE>\n{knowledge_base}\n</KNOWLEDGE_BASE>\n\n<TEXT_PART>\n{text_part}\n</TEXT_PART>",
+    "variables": ["text_part", "knowledge_base"]
+  },
+  "entity_kb_template": {
+    "template": "Entité: {entity_name}\nNoms alternatifs: {alternative_names}\nRésumé:\n{summary}"
+  }
+}
