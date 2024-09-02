@@ -16,6 +16,7 @@ class CreateUserSchema(UserBaseSchema):
 class UserResponseSchema(UserBaseSchema):
     id: uuid.UUID
     role: str
+    balance: float
     created_at: datetime
 
 

@@ -11,5 +11,6 @@ export interface CreateUserSchema extends UserBaseSchema {
 export interface UserResponseSchema extends UserBaseSchema {
     id: string,
     role: string,
+    balance: number,
     created_at: string
 }

@@ -1,7 +1,7 @@
 import uuid
 
 from ..database import Base
-from sqlalchemy import TIMESTAMP, Column, String, text
+from sqlalchemy import TIMESTAMP, Column, String, Float, text
 from sqlalchemy.dialects.postgresql import UUID
 
 
@@ -12,4 +12,5 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     role = Column(String, nullable=False, server_default='user')
+    balance = Column(Float, nullable=False, server_default='0')
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
