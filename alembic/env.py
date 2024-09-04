@@ -10,7 +10,8 @@ from backend.config import settings
 from backend.database import Base
 from backend.models.books import Book
 from backend.models.users import User
-from backend.models.text_parts import TextPart
+from backend.models.book_parts import BookPart
+from backend.models.kb_entries import KnowledgeBaseEntry
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

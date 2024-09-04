@@ -44,7 +44,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Se
     if not user_in_db:
         raise credentials_exception
 
-    return user_schemas.UserResponseSchema(name=user_in_db.name, email=user_in_db.email, id=user_in_db.id, role=user_in_db.role, created_at=user_in_db.created_at)
+    return user_schemas.UserResponseSchema(name=user_in_db.name, email=user_in_db.email, id=user_in_db.id, role=user_in_db.role, balance=user_in_db.balance, created_at=user_in_db.created_at)
 
 
 @router.post('/register', status_code=status.HTTP_201_CREATED, response_model=user_schemas.UserResponseSchema)

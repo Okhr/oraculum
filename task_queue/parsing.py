@@ -1,9 +1,13 @@
 import ebooklib
+import re
 from backend.database import SessionLocal
 from backend.models.users import User
 from backend.models.books import Book
-from backend.models.text_parts import TextPart
+from backend.models.book_parts import BookPart
 from core.parsing import extract_structured_toc
+
+EXCLUDE_LABELS = [r'^couverture$', r'^titre$', r'^avant-propos', r'^préface', r'^postface', r'^biographie$', r'^bibliographie$', r'^du même auteur$', r'^mentions légales$',
+                  r'^remerciements$', r'^copyright$', r'^droit d(’|\')auteur$', r'^dans la même collection$', r'^table des matières$', r'^note de l(’|\')auteure*$', r'^quatrième de couverture$']
 
 
 def extract_text_parts_task(book: ebooklib.epub.EpubBook, book_id: str):
@@ -12,13 +16,17 @@ def extract_text_parts_task(book: ebooklib.epub.EpubBook, book_id: str):
 
     try:
         def iterate_text_parts(node, sibling_index, parent_id=None):
-            book_part = TextPart(
+            # Check the part label to infer if it's part of the story
+            is_story_part = not any(re.match(pattern, node['label'], re.IGNORECASE) for pattern in EXCLUDE_LABELS)
+
+            book_part = BookPart(
                 book_id=book_id,
                 parent_id=parent_id,
                 toc_id=node['id'],
                 label=node['label'],
                 content=node['content'],
                 sibling_index=sibling_index,
+                is_story_part=is_story_part,
             )
 
             db.add(book_part)

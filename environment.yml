@@ -18,7 +18,7 @@ dependencies:
   - google-cloud-language
   - jupyter
   - openai
-  - langchain-text-splitters
+  - langchain
   - pip
   - fastapi
   - uvicorn
@@ -29,5 +29,5 @@ dependencies:
   - alembic
   - rq
   - pip:
-      - weaviate-client
-      - rq-dashboard
+    - weaviate-client
+    - rq-dashboard

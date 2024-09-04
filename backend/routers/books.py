@@ -17,8 +17,7 @@ from backend.schemas import users as user_schemas
 from backend.database import get_db
 from backend.routers import auth
 from backend.models.books import Book, FileType
-from backend.models.books import Book
-from backend.models.text_parts import TextPart
+from backend.models.book_parts import BookPart
 
 dotenv.load_dotenv()
 
@@ -73,7 +72,7 @@ async def create_upload_file(
 
     # Add a task to parse and extract book text_parts
     q.enqueue(extract_text_parts_task,
-              retry=Retry(max=3, interval=[60]),
+              retry=Retry(max=3, interval=[10, 30, 60]),
               kwargs={
                   'book': book,
                   'book_id': str(new_book_file.id),
@@ -127,8 +126,8 @@ async def delete_book(
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    # Delete all the text_parts associated with the book
-    db.query(TextPart).filter(TextPart.book_id == book_id).delete()
+    # Delete all the books_parts associated with the book
+    db.query(BookPart).filter(BookPart.book_id == book_id).delete()
 
     db.delete(book)
     db.commit()
