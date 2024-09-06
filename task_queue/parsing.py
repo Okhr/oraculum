@@ -1,5 +1,6 @@
 import ebooklib
 import re
+from task_queue.main import h
 from backend.database import SessionLocal
 from backend.models.users import User
 from backend.models.books import Book
@@ -10,6 +11,7 @@ EXCLUDE_LABELS = [r'^couverture$', r'^titre$', r'^avant-propos', r'^préface', r
                   r'^remerciements$', r'^copyright$', r'^droit d(’|\')auteur$', r'^dans la même collection$', r'^table des matières$', r'^note de l(’|\')auteure*$', r'^quatrième de couverture$']
 
 
+@h.task()
 def extract_text_parts_task(book: ebooklib.epub.EpubBook, book_id: str):
     content = extract_structured_toc(book)
     db = SessionLocal()

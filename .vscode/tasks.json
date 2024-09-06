@@ -34,9 +34,9 @@
             "problemMatcher": []
         },
         {
-            "label": "Start rq-worker",
+            "label": "Start huey",
             "type": "shell",
-            "command": "rq worker",
+            "command": "huey_consumer.py backend.main.h -k process -w 4",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -45,23 +45,7 @@
                 "reveal": "always",
                 "focus": false,
                 "panel": "new",
-                "group": "rq"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Start rq-dashboard",
-            "type": "shell",
-            "command": "rq-dashboard",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "new",
-                "group": "rq-dashboard"
+                "group": "huey"
             },
             "problemMatcher": []
         },
@@ -70,8 +54,7 @@
             "dependsOn": [
                 "Start Backend",
                 "Start Frontend",
-                "Start rq-worker",
-                "Start rq-dashboard"
+                "Start huey"
             ],
             "group": {
                 "kind": "build",

@@ -6,8 +6,6 @@ import dotenv
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from ebooklib import epub
 from sqlalchemy.orm import Session
-from redis import Redis
-from rq import Queue, Retry
 
 from core.parsing import extract_book_metadata, get_cover_image_as_base64
 from task_queue.parsing import extract_text_parts_task
@@ -20,8 +18,6 @@ from backend.models.books import Book, FileType
 from backend.models.book_parts import BookPart
 
 dotenv.load_dotenv()
-
-q = Queue(connection=Redis(host=os.environ.get("REDIS_HOST"), port=os.environ.get("REDIS_PORT")))
 
 router = APIRouter()
 
@@ -71,17 +67,7 @@ async def create_upload_file(
     db.refresh(new_book_file)
 
     # Add a task to parse and extract book text_parts
-    q.enqueue(extract_text_parts_task,
-              retry=Retry(max=3, interval=[10, 30, 60]),
-              kwargs={
-                  'book': book,
-                  'book_id': str(new_book_file.id),
-              },
-              result_ttl=3.156e7,  # 1 year
-              meta={
-                  'user_id': str(current_user.id),
-                  'book_id': str(new_book_file.id),
-              })
+    extract_text_parts_task(book=book, book_id=str(new_book_file.id))
 
     return book_schemas.BookUploadResponseSchema(
         id=new_book_file.id,

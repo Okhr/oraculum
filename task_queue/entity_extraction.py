@@ -5,8 +5,8 @@ import re
 from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from openai import OpenAI
-from rq.decorators import job
 from tqdm import tqdm
+from task_queue.main import h
 from backend.database import SessionLocal
 from backend.models.users import User
 from backend.models.books import Book
@@ -14,6 +14,7 @@ from backend.models.book_parts import BookPart
 from backend.models.kb_entries import KnowledgeBaseEntry
 
 
+@h.task()
 def extract_entities(book_id: str):
     load_dotenv()
 
