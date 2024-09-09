@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Start Backend",
+            "label": "Start backend",
             "type": "shell",
             "command": "uvicorn backend.main:app --reload --port 5050",
             "options": {
@@ -18,7 +18,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Start Frontend",
+            "label": "Start frontend",
             "type": "shell",
             "command": "npm run dev",
             "options": {
@@ -34,9 +34,9 @@
             "problemMatcher": []
         },
         {
-            "label": "Start huey",
+            "label": "Start dramatiq worker",
             "type": "shell",
-            "command": "huey_consumer.py backend.main.h -k process -w 4",
+            "command": "dramatiq task_queue",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -52,9 +52,9 @@
         {
             "label": "Start All",
             "dependsOn": [
-                "Start Backend",
-                "Start Frontend",
-                "Start huey"
+                "Start backend",
+                "Start frontend",
+                "Start dramatiq worker"
             ],
             "group": {
                 "kind": "build",

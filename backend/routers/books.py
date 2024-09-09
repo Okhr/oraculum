@@ -7,8 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from ebooklib import epub
 from sqlalchemy.orm import Session
 
+from backend.models.kb_entries import KnowledgeBaseEntry
 from core.parsing import extract_book_metadata, get_cover_image_as_base64
-from task_queue.parsing import extract_text_parts_task
+from task_queue.entity_extraction import extract_entities_task
+from task_queue.parsing import extract_book_parts_task
 
 from backend.schemas import books as book_schemas
 from backend.schemas import users as user_schemas
@@ -67,7 +69,7 @@ async def create_upload_file(
     db.refresh(new_book_file)
 
     # Add a task to parse and extract book text_parts
-    extract_text_parts_task(book=book, book_id=str(new_book_file.id))
+    extract_book_parts_task.send(book=book, book_id=str(new_book_file.id))
 
     return book_schemas.BookUploadResponseSchema(
         id=new_book_file.id,
@@ -111,6 +113,9 @@ async def delete_book(
 
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
+
+    # Delete all the knowledge_base_entries associated with the book
+    db.query(KnowledgeBaseEntry).filter(KnowledgeBaseEntry.book_id == book_id).delete()
 
     # Delete all the books_parts associated with the book
     db.query(BookPart).filter(BookPart.book_id == book_id).delete()

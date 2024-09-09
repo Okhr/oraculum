@@ -1,6 +1,7 @@
 import ebooklib
 import re
-from task_queue.main import h
+import dramatiq
+from task_queue.main import broker
 from backend.database import SessionLocal
 from backend.models.users import User
 from backend.models.books import Book
@@ -11,8 +12,8 @@ EXCLUDE_LABELS = [r'^couverture$', r'^titre$', r'^avant-propos', r'^préface', r
                   r'^remerciements$', r'^copyright$', r'^droit d(’|\')auteur$', r'^dans la même collection$', r'^table des matières$', r'^note de l(’|\')auteure*$', r'^quatrième de couverture$']
 
 
-@h.task()
-def extract_text_parts_task(book: ebooklib.epub.EpubBook, book_id: str):
+@dramatiq.actor(broker=broker)
+def extract_book_parts_task(book: ebooklib.epub.EpubBook, book_id: str):
     content = extract_structured_toc(book)
     db = SessionLocal()
 
@@ -32,7 +33,6 @@ def extract_text_parts_task(book: ebooklib.epub.EpubBook, book_id: str):
             )
 
             db.add(book_part)
-            db.commit()
 
             for i, child in enumerate(node['children']):
                 iterate_text_parts(child, i, parent_id=book_part.id)

@@ -1,4 +1,7 @@
-from huey import RedisHuey
 import os
+from dramatiq.brokers.redis import RedisBroker
+from dotenv import load_dotenv
 
-h = RedisHuey('oraculum' ,host=os.environ.get("REDIS_HOST"), port=os.environ.get("REDIS_PORT"))
+load_dotenv()
+
+broker = RedisBroker(host=os.getenv('REDIS_HOST'), port=os.getenv('REDIS_PORT'))

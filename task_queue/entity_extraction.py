@@ -3,10 +3,12 @@ import os
 from pprint import pp
 import re
 from dotenv import load_dotenv
+import dramatiq
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from openai import OpenAI
 from tqdm import tqdm
-from task_queue.main import h
+
+from task_queue.main import broker
 from backend.database import SessionLocal
 from backend.models.users import User
 from backend.models.books import Book
@@ -14,8 +16,8 @@ from backend.models.book_parts import BookPart
 from backend.models.kb_entries import KnowledgeBaseEntry
 
 
-@h.task()
-def extract_entities(book_id: str):
+@dramatiq.actor(broker=broker)
+def extract_entities_task(book_id: str):
     load_dotenv()
 
     client = OpenAI(
@@ -87,6 +89,11 @@ def extract_entities(book_id: str):
 
                 # set the book part as entity extracted
                 book_part.is_entity_extracted = True
+                db.commit()
+
+            else:
+                print(f"Skipping book part : {book_part.label}")
+        return book_id
 
     finally:
         db.close()
