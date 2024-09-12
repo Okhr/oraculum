@@ -36,7 +36,7 @@
         {
             "label": "Start dramatiq worker",
             "type": "shell",
-            "command": "dramatiq task_queue",
+            "command": "dramatiq task_queue.main",
             "options": {
                 "cwd": "${workspaceFolder}"
             },

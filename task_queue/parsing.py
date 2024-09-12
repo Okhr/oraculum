@@ -1,7 +1,7 @@
-import ebooklib
+import io
+from ebooklib import epub
 import re
 import dramatiq
-from task_queue.main import broker
 from backend.database import SessionLocal
 from backend.models.users import User
 from backend.models.books import Book
@@ -12,10 +12,18 @@ EXCLUDE_LABELS = [r'^couverture$', r'^titre$', r'^avant-propos', r'^préface', r
                   r'^remerciements$', r'^copyright$', r'^droit d(’|\')auteur$', r'^dans la même collection$', r'^table des matières$', r'^note de l(’|\')auteure*$', r'^quatrième de couverture$']
 
 
-@dramatiq.actor(broker=broker)
-def extract_book_parts_task(book: ebooklib.epub.EpubBook, book_id: str):
-    content = extract_structured_toc(book)
+@dramatiq.actor(max_retries=3)
+def extract_book_parts_task(book_id: str):
     db = SessionLocal()
+
+    book_file = db.query(Book).filter(Book.id == book_id).first()
+
+    if book_file:
+        book = epub.read_epub(io.BytesIO(book_file.file_data))
+    else:
+        raise ValueError("Book with the provided ID was not found in the database.")
+
+    content = extract_structured_toc(book)
 
     try:
         def iterate_text_parts(node, sibling_index, parent_id=None):

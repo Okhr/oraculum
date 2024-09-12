@@ -1,4 +1,5 @@
 import hashlib
+import io
 import os
 from typing import Annotated
 import uuid
@@ -37,14 +38,16 @@ async def create_upload_file(
     max_file_size = 100 * 1024 * 1024
     if uploaded_file.size > max_file_size:
         raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail='File size exceeds the maximum limit of 100 MB')
+
+    file_data = uploaded_file.file.read()
+
     try:
-        book = epub.read_epub(uploaded_file.file)
+        book = epub.read_epub(io.BytesIO(file_data))
         book_metadata = extract_book_metadata(book)
         cover_image_base64 = get_cover_image_as_base64(book)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'Error processing the file: {str(e)}')
 
-    file_data = uploaded_file.file.read()
     data_hash = hashlib.sha256(file_data).hexdigest()
 
     # Check if the file has been already uploaded by the user
@@ -69,7 +72,7 @@ async def create_upload_file(
     db.refresh(new_book_file)
 
     # Add a task to parse and extract book text_parts
-    extract_book_parts_task.send(book=book, book_id=str(new_book_file.id))
+    extract_book_parts_task.send(book_id=str(new_book_file.id))
 
     return book_schemas.BookUploadResponseSchema(
         id=new_book_file.id,

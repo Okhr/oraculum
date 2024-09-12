@@ -1,5 +1,5 @@
-from task_queue.entity_extraction import extract_entities_task
+from task_queue.parsing import extract_book_parts_task
 
 
 if __name__ == '__main__':
-    extract_entities_task.call_local(book_id="f141288c-2762-43fe-9cb6-02e6aa4689db")
+    extract_book_parts_task(book_id="b6ee12ec-583f-4bce-9e52-333396fbf809")

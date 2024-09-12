@@ -8,7 +8,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from openai import OpenAI
 from tqdm import tqdm
 
-from task_queue.main import broker
 from backend.database import SessionLocal
 from backend.models.users import User
 from backend.models.books import Book
@@ -16,7 +15,7 @@ from backend.models.book_parts import BookPart
 from backend.models.kb_entries import KnowledgeBaseEntry
 
 
-@dramatiq.actor(broker=broker)
+@dramatiq.actor(max_retries=3)
 def extract_entities_task(book_id: str):
     load_dotenv()
 
