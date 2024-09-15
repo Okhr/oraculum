@@ -1,5 +1,5 @@
 import { Box } from '@chakra-ui/react';
-import { Select as ChakraSelect } from 'chakra-react-select';
+import { Select as ChakraSelect, SingleValue } from 'chakra-react-select';
 import { BookResponseSchema } from '../../types/books';
 import { useEffect, useState } from 'react';
 
@@ -11,9 +11,18 @@ const BookSelector = ({ userBooks }: BookSelectorProps) => {
 
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
 
-  const handleBookChange = (selectedOption: any) => {
-    localStorage.setItem('selectedBookId', selectedOption.value);
-    setSelectedBookId(selectedOption.value);
+
+  interface OptionType {
+    value: string;
+    label: string;
+  }
+
+  const handleBookChange = (selectedOption: SingleValue<OptionType>) => {
+    if (selectedOption) {
+      localStorage.setItem('selectedBookId', selectedOption.value);
+      window.dispatchEvent(new Event('storage'))
+      setSelectedBookId(selectedOption.value);
+    }
   }
 
   useEffect(() => {
@@ -22,6 +31,7 @@ const BookSelector = ({ userBooks }: BookSelectorProps) => {
       setSelectedBookId(storedBookId);
     } else {
       localStorage.removeItem('selectedBookId');
+      window.dispatchEvent(new Event('storage'))
       setSelectedBookId(null);
     }
   }, [userBooks]);

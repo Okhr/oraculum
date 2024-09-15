@@ -17,12 +17,8 @@ export const useUploadBook = () => {
             },
         };
 
-        try {
-            const response = await axios.post<BookUploadResponseSchema>(globalConfig.API_URL + '/books/upload/', formData, config);
-            return response.data;
-        } catch (error) {
-            throw error;
-        }
+        const response = await axios.post<BookUploadResponseSchema>(globalConfig.API_URL + '/books/upload/', formData, config);
+        return response.data;
     };
 
     return { uploadBook };
@@ -37,12 +33,9 @@ export const useGetUserBooks = () => {
                 'Authorization': authHeader,
             },
         };
-        try {
-            const response = await axios.get<BookResponseSchema[]>(globalConfig.API_URL + '/books/', config);
-            return response.data;
-        } catch (error) {
-            throw error;
-        }
+
+        const response = await axios.get<BookResponseSchema[]>(globalConfig.API_URL + '/books/', config);
+        return response.data;
     };
 
     return { getUserBooks };
@@ -57,12 +50,9 @@ export const useDeleteBook = () => {
                 'Authorization': authHeader,
             },
         };
-        try {
-            const response = await axios.delete<BookResponseSchema>(globalConfig.API_URL + `/books/delete/${bookId}`, config);
-            return response.data;
-        } catch (error) {
-            throw error;
-        }
+
+        const response = await axios.delete<BookResponseSchema>(globalConfig.API_URL + `/books/delete/${bookId}`, config);
+        return response.data;
     };
 
     return { deleteBook };
@@ -77,12 +67,9 @@ export const useUpdateBook = () => {
                 'Authorization': authHeader,
             },
         };
-        try {
-            const response = await axios.put<BookResponseSchema>(globalConfig.API_URL + `/books/update/${bookId}`, updatedBook, config);
-            return response.data;
-        } catch (error) {
-            throw error;
-        }
+        
+        const response = await axios.put<BookResponseSchema>(globalConfig.API_URL + `/books/update/${bookId}`, updatedBook, config);
+        return response.data;
     };
 
     return { updateBook };

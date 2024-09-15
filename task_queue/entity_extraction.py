@@ -15,7 +15,7 @@ from backend.models.book_parts import BookPart
 from backend.models.kb_entries import KnowledgeBaseEntry
 
 
-@dramatiq.actor(max_retries=3)
+@dramatiq.actor(max_retries=0)
 def extract_entities_task(book_id: str):
     load_dotenv()
 

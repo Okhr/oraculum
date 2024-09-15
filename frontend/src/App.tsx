@@ -15,6 +15,7 @@ import LoginForm from "./components/auth/LoginForm.tsx";
 import "./App.css";
 import { Toaster } from "react-hot-toast";
 import Library from "./components/pages/Library.tsx";
+import Entities from "./components/pages/Entities.tsx";
 
 const store = createStore({
   authName: "_auth",
@@ -45,7 +46,7 @@ function App() {
                 path="/characters"
                 element={
                   <RequireAuth fallbackPath={"/login"}>
-                    <Library />
+                    <Entities />
                   </RequireAuth>
                 }
               />
@@ -53,7 +54,7 @@ function App() {
                 path="/locations"
                 element={
                   <RequireAuth fallbackPath={"/login"}>
-                    <Library />
+                    <Entities />
                   </RequireAuth>
                 }
               />

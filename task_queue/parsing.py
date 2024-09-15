@@ -12,7 +12,7 @@ EXCLUDE_LABELS = [r'^couverture$', r'^titre$', r'^avant-propos', r'^préface', r
                   r'^remerciements$', r'^copyright$', r'^droit d(’|\')auteur$', r'^dans la même collection$', r'^table des matières$', r'^note de l(’|\')auteure*$', r'^quatrième de couverture$']
 
 
-@dramatiq.actor(max_retries=3)
+@dramatiq.actor(max_retries=0)
 def extract_book_parts_task(book_id: str):
     db = SessionLocal()
 
@@ -30,17 +30,32 @@ def extract_book_parts_task(book_id: str):
             # Check the part label to infer if it's part of the story
             is_story_part = not any(re.match(pattern, node['label'], re.IGNORECASE) for pattern in EXCLUDE_LABELS)
 
-            book_part = BookPart(
-                book_id=book_id,
-                parent_id=parent_id,
-                toc_id=node['id'],
-                label=node['label'],
-                content=node['content'],
-                sibling_index=sibling_index,
-                is_story_part=is_story_part,
-            )
+            # Check if the text_part is already present in the database
+            existing_book_part = db.query(BookPart).filter(
+                BookPart.book_id == book_id,
+                BookPart.parent_id == parent_id,
+                BookPart.toc_id == node['id'],
+                BookPart.label == node['label'],
+                BookPart.content == node['content'],
+                BookPart.sibling_index == sibling_index,
+            ).first()
 
-            db.add(book_part)
+            if not existing_book_part:
+                book_part = BookPart(
+                    book_id=book_id,
+                    parent_id=parent_id,
+                    toc_id=node['id'],
+                    label=node['label'],
+                    content=node['content'],
+                    sibling_index=sibling_index,
+                    is_story_part=is_story_part,
+                )
+
+                db.add(book_part)
+                db.commit()
+            else:
+                book_part = existing_book_part
+                print(f"BookPart with toc_id : {node['id']}, label : {node['label']} already exists in the database.")
 
             for i, child in enumerate(node['children']):
                 iterate_text_parts(child, i, parent_id=book_part.id)

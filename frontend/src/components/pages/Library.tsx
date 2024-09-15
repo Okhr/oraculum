@@ -122,7 +122,7 @@ const Library = () => {
   })
 
   const [acceptedFiles, setAcceptedFiles] = useState<File[]>([]);
-  const [_, setRejectedFiles] = useState<FileRejection[]>([]);
+  const [, setRejectedFiles] = useState<FileRejection[]>([]);
 
   const onDrop = useCallback((newFiles: File[], rejectedFiles: FileRejection[]) => {
     setAcceptedFiles(prevAcceptedFiles => [...prevAcceptedFiles, ...newFiles]);
