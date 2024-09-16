@@ -1,44 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Box, Heading, useMediaQuery, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon } from '@chakra-ui/react';
+import { Box, Heading, useMediaQuery } from '@chakra-ui/react';
 import Nav from '../navigation/Nav';
 import MobileNav from '../navigation/MobileNav';
 import { useGetUserBooks } from '../../apis/books';
 import { useGetTableOfContent } from '../../apis/book_parts';
 import { useQuery } from '@tanstack/react-query';
 import BookSelector from '../state/BookSelector';
-import { TocBookPartResponseSchema } from '../../types/book_parts';
-
-const renderBookParts = (parts: TocBookPartResponseSchema[]) => {
-    return (
-        <>
-            {parts.map(part => (
-                part.children && part.children.length > 0 ? (
-                    <Accordion key={part.id} allowMultiple>
-                        <AccordionItem>
-                            <AccordionButton>
-                                <Box flex="1" textAlign="left">
-                                    <Heading size="sm" color={"gray.600"}>
-                                        {part.label}
-                                    </Heading>
-                                </Box>
-                                <AccordionIcon />
-                            </AccordionButton>
-                            <AccordionPanel pb={2}>
-                                {renderBookParts(part.children)}
-                            </AccordionPanel>
-                        </AccordionItem>
-                    </Accordion>
-                ) : (
-                    <Box key={part.id} p={2}>
-                        <Heading size="sm" color={"gray.600"}>
-                            {part.label}
-                        </Heading>
-                    </Box>
-                )
-            ))}
-        </>
-    );
-};
+import TableOfContent from '../navigation/TableOfContent';
 
 const Entities = () => {
     const [isLargerThan768] = useMediaQuery('(min-width: 768px)');
@@ -80,21 +48,14 @@ const Entities = () => {
                         <Box>
                             <Heading size="lg" color={"gray.700"}>Current Book</Heading>
                             <BookSelector userBooks={userBooks} />
-
-                            {bookParts && bookParts.length > 0 && (
-                                <Box mt={4}>
-
-
-                                    <Box mt={4}>
-                                        <Heading size="md" color={"gray.600"}>Book Parts</Heading>
-                                        {bookParts && bookParts.length > 0 && (
-                                            <Box>
-                                                {renderBookParts(bookParts)}
-                                            </Box>
-                                        )}
+                            <Box mt={4}>
+                                <Heading size="lg" color={"gray.700"}>Book Parts</Heading>
+                                {bookParts && bookParts.length > 0 && (
+                                    <Box>
+                                        <TableOfContent bookParts={bookParts}></TableOfContent>
                                     </Box>
-                                </Box>
-                            )}
+                                )}
+                            </Box>
                         </Box>
                     )}
                 </Box>

@@ -1,40 +1,29 @@
-import { Box, Heading, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon } from '@chakra-ui/react';
+import { Box, Text, Badge, Flex } from '@chakra-ui/react';
 import { TocBookPartResponseSchema } from '../../types/book_parts';
 
 type TableOfContentProps = {
-    parts: TocBookPartResponseSchema[];
+    bookParts: TocBookPartResponseSchema[];
+    depth?: number;
 };
 
-const TableOfContent = ({ parts }: TableOfContentProps) => {
-    const renderBookParts = (parts: TocBookPartResponseSchema[]) => {
-        return parts.map(part => (
-            part.children && part.children.length > 0 ? (
-                <Accordion key={part.id} allowMultiple>
-                    <AccordionItem>
-                        <AccordionButton>
-                            <Box flex="1" textAlign="left">
-                                <Heading size="sm" color={"gray.600"}>
-                                    {part.label}
-                                </Heading>
-                            </Box>
-                            <AccordionIcon />
-                        </AccordionButton>
-                        <AccordionPanel pb={2}>
-                            {renderBookParts(part.children)}
-                        </AccordionPanel>
-                    </AccordionItem>
-                </Accordion>
-            ) : (
-                <Box key={part.id} p={2}>
-                    <Heading size="sm" color={"gray.600"}>
-                        {part.label}
-                    </Heading>
+const TableOfContent = ({ bookParts, depth = 0 }: TableOfContentProps) => {
+    return (
+        <>
+            {bookParts.map(bookPart => (
+                <Box key={bookPart.id} m={0} p={0} ml={depth * 8}>
+                    <Box bg={"white"} p={1} px={2} borderRadius="md" my={2} boxShadow={"0px 2px 5px rgba(127, 127, 127, 0.2)"}>
+                        <Flex justifyContent="space-between" alignItems="center">
+                            <Text size={depth !== 0 ? "sm" : "md"}>{bookPart.label}</Text>
+                            <Badge size={"sm"} colorScheme={bookPart.is_story_part ? 'purple' : 'gray'} borderRadius="sm" px={2}>
+                                {bookPart.is_story_part ? 'Story' : 'Non-Story'}
+                            </Badge>
+                        </Flex>
+                    </Box>
+                    {bookPart.children && <TableOfContent bookParts={bookPart.children} depth={depth + 1} />}
                 </Box >
-            )
-        ));
-    };
-
-    return <>{renderBookParts(parts)}</>;
+            ))}
+        </>
+    );
 };
 
 export default TableOfContent;
