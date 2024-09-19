@@ -47,7 +47,7 @@ const Entities = () => {
         select: (data) => {
             if (data) {
                 return data.reduce((acc, curr) => {
-                    acc.set(curr.book_id, curr.content);
+                    acc.set(curr.id, curr.content);
                     return acc;
                 }, new Map<string, string>());
             }
