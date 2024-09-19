@@ -26,6 +26,7 @@ def extract_entities_task(book_id: str):
     with open(f'core/prompts/fr.json', 'r') as f:
         data = json.load(f)
         entity_summarization_with_kb_prompt = data['entity_summarization_with_kb_prompt']
+
     db = SessionLocal()
 
     try:
@@ -63,6 +64,7 @@ def extract_entities_task(book_id: str):
                                     {"role": "user", "content": computed_prompt}
                                 ]
                             )
+                            json_output = parse_json_output(completion.choices[0].message.content)
                             break
                         except Exception as e:
                             print(f"Attempt {attempt + 1} failed. Retrying...")
@@ -70,14 +72,12 @@ def extract_entities_task(book_id: str):
                                 print(f"Max retries exceeded. Failed to get a response. Error: {e}")
                                 raise
 
-                    json_output = parse_json_output(completion.choices[0].message.content)
-
                     for entry in json_output:
                         new_entry = KnowledgeBaseEntry(
                             book_id=book_id,
                             book_part_id=book_part.id,
                             entity_name=entry['entity'],
-                            alternative_names=','.join(entry.get('alternative_names', [])),
+                            alternative_names='|'.join(entry.get('alternative_names', [])),
                             referenced_entity_name=entry.get('referenced_entity', ''),
                             category=entry['category'],
                             fact=entry['summary'],
@@ -85,6 +85,7 @@ def extract_entities_task(book_id: str):
                             sibling_total=len(sub_parts)
                         )
                         db.add(new_entry)
+                        db.commit()
 
                 # set the book part as entity extracted
                 book_part.is_entity_extracted = True
@@ -92,7 +93,6 @@ def extract_entities_task(book_id: str):
 
             else:
                 print(f"Skipping book part : {book_part.label}")
-        return book_id
 
     finally:
         db.close()

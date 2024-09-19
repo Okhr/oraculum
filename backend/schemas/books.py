@@ -13,7 +13,7 @@ class BookBaseSchema(BaseModel):
 
 class BookUploadResponseSchema(BookBaseSchema):
     id: uuid.UUID
-    upload_date: datetime
+    created_at: datetime
     file_type: FileType
     original_file_name: str
     file_size: int
@@ -22,7 +22,7 @@ class BookUploadResponseSchema(BookBaseSchema):
 
 class BookResponseSchema(BookBaseSchema):
     id: uuid.UUID
-    upload_date: datetime
+    created_at: datetime
     file_type: FileType
     cover_image_base64: Optional[str] = None
     is_parsed: bool
