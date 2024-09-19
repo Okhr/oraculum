@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Heading, useMediaQuery } from '@chakra-ui/react';
+import { Box, Heading, Spinner, useMediaQuery } from '@chakra-ui/react';
 import Nav from '../navigation/Nav';
 import MobileNav from '../navigation/MobileNav';
 import { useGetUserBooks } from '../../apis/books';
@@ -34,13 +34,13 @@ const Entities = () => {
         refetchInterval: 5000,
     });
 
-    const { data: bookParts } = useQuery({
+    const { data: bookParts, isLoading: isLoadingBookParts } = useQuery({
         queryKey: ['bookParts', selectedBookId],
         queryFn: () => selectedBookId ? getTableOfContent(selectedBookId) : null,
         enabled: !!selectedBookId,
     });
 
-    const { data: bookPartsContent } = useQuery({
+    const { data: bookPartsContent, isLoading: isLoadingBookPartsContent } = useQuery({
         queryKey: ['bookPartsContent', selectedBookId],
         queryFn: () => selectedBookId ? getBookParts(selectedBookId) : null,
         enabled: !!selectedBookId,
@@ -66,11 +66,12 @@ const Entities = () => {
                             <BookSelector userBooks={userBooks} />
                             <Box mt={4}>
                                 <Heading size="lg" color={"gray.700"}>Book Parts</Heading>
-                                {bookParts && bookPartsContent && bookParts.length > 0 && (
-                                    <Box>
-                                        <TableOfContent bookParts={bookParts} bookPartsContent={bookPartsContent}></TableOfContent>
-                                    </Box>
-                                )}
+                                {(isLoadingBookParts || isLoadingBookPartsContent) ? <Spinner></Spinner> : (
+                                    bookParts && bookPartsContent && bookParts.length > 0 && (
+                                        <Box>
+                                            <TableOfContent bookParts={bookParts} bookPartsContent={bookPartsContent}></TableOfContent>
+                                        </Box>
+                                    ))}
                             </Box>
                         </Box>
                     )}

@@ -11,8 +11,11 @@ const Nav = ({ activeLink }: NavProps) => {
   return (
     <Box h="100vh" bg="white.100" px={8} py={4} w={48} borderRightWidth="1px" shadow="md">
       <VStack align="start" spacing={4} h="100%" w="100%">
+
         <Center w="100%">
-          <Image src="/images/logo.png" alt="Logo" width={24} />
+          <Link href="/">
+            <Image src="/images/logo.png" alt="Logo" width={24} />
+          </Link>
         </Center>
         <Button
           key={"/library"}
