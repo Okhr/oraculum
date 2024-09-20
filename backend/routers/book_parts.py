@@ -18,7 +18,7 @@ async def get_table_of_content(book_id: str, db: Session = Depends(get_db)) -> L
 
     def build_response(book_parts, parent_id=None):
         response = []
-        for part in book_parts:
+        for part in sorted(book_parts, key=lambda x: x.sibling_index if x.parent_id == parent_id else 0):
             if part.parent_id == parent_id:
                 children = build_response(book_parts, part.id)
                 response_part = TocBookPartResponseSchema(

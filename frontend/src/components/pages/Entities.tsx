@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Box, Heading, Spinner, useMediaQuery } from '@chakra-ui/react';
+import { Box, Button, Heading, Progress, Text, useMediaQuery } from '@chakra-ui/react';
 import Nav from '../navigation/Nav';
 import MobileNav from '../navigation/MobileNav';
 import { useGetUserBooks } from '../../apis/books';
 import { useGetBookParts, useGetTableOfContent } from '../../apis/book_parts';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import BookSelector from '../state/BookSelector';
-import TableOfContent from '../navigation/TableOfContent';
+import { useGetEntityExtractionProcess, useTriggerExtraction } from '../../apis/book_processes';
 
 const Entities = () => {
     const [isLargerThan768] = useMediaQuery('(min-width: 768px)');
@@ -14,6 +14,10 @@ const Entities = () => {
     const { getUserBooks } = useGetUserBooks();
     const { getTableOfContent } = useGetTableOfContent();
     const { getBookParts } = useGetBookParts();
+    const { triggerExtraction } = useTriggerExtraction();
+    const { getEntityExtractionProcess } = useGetEntityExtractionProcess();
+
+    const queryClient = useQueryClient();
 
     const [selectedBookId, setSelectedBookId] = useState(localStorage.getItem('selectedBookId') || null);
     useEffect(() => {
@@ -31,9 +35,10 @@ const Entities = () => {
     const { data: userBooks } = useQuery({
         queryKey: ['userBooks'],
         queryFn: getUserBooks,
-        refetchInterval: 5000,
+        refetchInterval: 3000,
     });
 
+    /*
     const { data: bookParts, isLoading: isLoadingBookParts } = useQuery({
         queryKey: ['bookParts', selectedBookId],
         queryFn: () => selectedBookId ? getTableOfContent(selectedBookId) : null,
@@ -54,6 +59,23 @@ const Entities = () => {
             return new Map<string, string>();
         },
     });
+    */
+
+    const { data: entityExtractionProcess } = useQuery({
+        queryKey: ['entityExtractionProcess', selectedBookId],
+        queryFn: () => selectedBookId ? getEntityExtractionProcess(selectedBookId) : null,
+        enabled: !!selectedBookId,
+        refetchInterval: 1000,
+    });
+
+    const triggerMutation = useMutation({
+        mutationFn: triggerExtraction,
+        onSuccess: () => {
+            if (selectedBookId) {
+                queryClient.invalidateQueries({ queryKey: ['entityExtractionProcess', selectedBookId] });
+            }
+        }
+    });
 
     return (
         <Box display="flex" flexDirection={{ base: "column", md: "row" }}>
@@ -61,19 +83,28 @@ const Entities = () => {
             <Box flex="1" p={4} mt={isLargerThan768 ? 0 : 20} bg="gray.100" height="100vh" overflowY="auto">
                 <Box maxW={{ base: "100%", md: "5xl" }} mx="auto">
                     {userBooks && userBooks.length > 0 && (
-                        <Box>
+                        <>
                             <Heading size="lg" color={"gray.700"}>Current Book</Heading>
                             <BookSelector userBooks={userBooks} />
-                            <Box mt={4}>
-                                <Heading size="lg" color={"gray.700"}>Book Parts</Heading>
-                                {(isLoadingBookParts || isLoadingBookPartsContent) ? <Spinner></Spinner> : (
-                                    bookParts && bookPartsContent && bookParts.length > 0 && (
-                                        <Box>
-                                            <TableOfContent bookParts={bookParts} bookPartsContent={bookPartsContent}></TableOfContent>
-                                        </Box>
-                                    ))}
-                            </Box>
-                        </Box>
+                            {(selectedBookId && entityExtractionProcess) && (
+                                (entityExtractionProcess.is_requested && entityExtractionProcess.completeness) ? (
+                                    <Box mt={4}>
+                                        <Progress value={Math.round(entityExtractionProcess.completeness * 100) || 0} colorScheme="purple" />
+                                        <Text mt={2} color="gray.600">{`${Math.round(entityExtractionProcess.completeness * 100) || 0}% completed`}</Text>
+                                    </Box>
+                                ) : (
+                                    <Button
+                                        mt={4}
+                                        colorScheme="purple"
+                                        onClick={() => triggerMutation.mutate(selectedBookId)}
+                                    >
+                                        {entityExtractionProcess?.estimated_cost !== undefined
+                                            ? `Extract entities ($${entityExtractionProcess.estimated_cost.toFixed(2)})`
+                                            : 'Extract entities'}
+                                    </Button>
+                                )
+                            )}
+                        </>
                     )}
                 </Box>
             </Box>

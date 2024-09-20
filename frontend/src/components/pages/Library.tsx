@@ -48,7 +48,7 @@ const Library = () => {
   const { data: userBooks } = useQuery({
     queryKey: ['userBooks'],
     queryFn: getUserBooks,
-    refetchInterval: 5000,
+    refetchInterval: 3000,
   });
 
   const uploadMutation = useMutation({
@@ -210,7 +210,7 @@ const Library = () => {
           <Heading size="lg" color={"gray.700"}>My library</Heading>
           {userBooks && userBooks.length > 0 ? (
             <Box my={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
-              {userBooks.sort((a, b) => new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime()).map(book => (
+              {userBooks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map(book => (
                 <Card key={book.id} borderRadius={4} overflow="hidden" display="flex" flexDirection="row" height={"200px"}>
                   <Box
                     display="flex"
@@ -238,7 +238,7 @@ const Library = () => {
                     <VStack align='end' spacing='2'>
                       <Text fontWeight="bold" fontSize="md" textAlign="right" noOfLines={3} textOverflow="ellipsis">{book.title}</Text>
                       <Text fontSize="sm" textAlign="right" noOfLines={1} textOverflow="ellipsis">{book.author}</Text>
-                      <Text fontSize="sm" fontStyle="italic" textAlign="right">Uploaded : {new Date(book.upload_date).toLocaleDateString('en-US', { year: '2-digit', month: 'short', day: 'numeric' })}</Text>
+                      <Text fontSize="sm" fontStyle="italic" textAlign="right">Uploaded : {new Date(book.created_at).toLocaleDateString('en-US', { year: '2-digit', month: 'short', day: 'numeric' })}</Text>
                     </VStack>
                     <HStack spacing={4}>
                       {book.is_parsed ? (

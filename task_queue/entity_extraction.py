@@ -2,6 +2,7 @@ import json
 import os
 from pprint import pp
 import re
+import time
 from dotenv import load_dotenv
 import dramatiq
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -58,6 +59,8 @@ def extract_entities_task(book_id: str):
                     max_retries = 3
                     for attempt in range(max_retries):
                         try:
+                            ### Replace the actual API call with a mock response for testing purposes
+                            '''
                             completion = client.chat.completions.create(
                                 model="gpt-4o-mini",
                                 messages=[
@@ -65,6 +68,25 @@ def extract_entities_task(book_id: str):
                                 ]
                             )
                             json_output = parse_json_output(completion.choices[0].message.content)
+                            '''
+                            # Mock response for testing purposes
+                            time.sleep(3)  # Simulate a delay
+                            json_output = [
+                                {
+                                    "entity": "Entity 1",
+                                    "alternative_names": ["Alt Name 1", "Alt Name 2"],
+                                    "referenced_entity": "Referenced Entity 1",
+                                    "category": "Category 1",
+                                    "summary": "Summary of Entity 1"
+                                },
+                                {
+                                    "entity": "Entity 2",
+                                    "alternative_names": ["Alt Name 3", "Alt Name 4"],
+                                    "referenced_entity": "Referenced Entity 2",
+                                    "category": "Category 2",
+                                    "summary": "Summary of Entity 2"
+                                }
+                            ]
                             break
                         except Exception as e:
                             print(f"Attempt {attempt + 1} failed. Retrying...")
