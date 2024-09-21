@@ -16,7 +16,7 @@ from backend.models.book_parts import BookPart
 from backend.models.kb_entries import KnowledgeBaseEntry
 
 
-@dramatiq.actor(max_retries=0)
+@dramatiq.actor(max_retries=0, time_limit=60*60*1000)
 def extract_entities_task(book_id: str):
     load_dotenv()
 
@@ -59,7 +59,7 @@ def extract_entities_task(book_id: str):
                     max_retries = 3
                     for attempt in range(max_retries):
                         try:
-                            ### Replace the actual API call with a mock response for testing purposes
+                            # Replace the actual API call with a mock response for testing purposes
                             '''
                             completion = client.chat.completions.create(
                                 model="gpt-4o-mini",
@@ -70,7 +70,7 @@ def extract_entities_task(book_id: str):
                             json_output = parse_json_output(completion.choices[0].message.content)
                             '''
                             # Mock response for testing purposes
-                            time.sleep(3)  # Simulate a delay
+                            time.sleep(0.2)  # Simulate a delay
                             json_output = [
                                 {
                                     "entity": "Entity 1",

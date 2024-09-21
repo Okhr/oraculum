@@ -158,7 +158,7 @@ const Library = () => {
   };
 
   return (
-    <Box display="flex" flexDirection={{ base: "column", md: "row" }}>
+    <Box display="flex" flexDirection={{ base: "column", md: "row" }} height="100vh">
       {isLargerThan768 ? <Nav activeLink="Library" /> : <MobileNav activeLink="Library" />}
       <Box flex="1" p={4} mt={isLargerThan768 ? 0 : 20} bg="gray.100" height="100vh" overflowY="auto">
         <Box maxW={{ base: "100%", md: "5xl" }} mx="auto">

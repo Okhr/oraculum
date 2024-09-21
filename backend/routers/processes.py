@@ -1,3 +1,4 @@
+import math
 from backend.models.book_parts import BookPart
 from sqlalchemy.sql import func
 from sqlalchemy.orm import joinedload
@@ -28,6 +29,9 @@ async def trigger_extraction(book_id: uuid.UUID, current_user: Annotated[user_sc
     if book.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="The book does not belong to the current user")
 
+    if not book.is_parsed:
+        raise HTTPException(status_code=400, detail="Book has not been parsed yet")
+
     if book.is_parsed:
         book.extraction_start_time = datetime.now(timezone.utc)
         db.commit()
@@ -47,16 +51,19 @@ async def get_entity_extraction_process(book_id: uuid.UUID, current_user: Annota
         raise HTTPException(status_code=403, detail="The book does not belong to the current user")
 
     story_parts = db.query(BookPart).filter(BookPart.book_id == book_id, BookPart.is_story_part == True).all()
+
     # 1 token = 0.75 words, 2 times the number of tokens for question and answer, cost per 1M tokens is $0.20
-    estimated_cost = sum(len(part.content.split(" ")) for part in story_parts) * (1/0.75) / 1e6 * 2 * 0.2
+    # 1$ = 1000 coins
+    estimated_cost = math.ceil(sum(len(part.content.split(" ")) for part in story_parts) * (1/0.75) / 1e6 * 2 * 0.2 * 1000)
 
     if book.extraction_start_time is None:
         return BookProcessResponseSchema(book_id=book_id, is_requested=False, estimated_cost=estimated_cost, requested_at=None, completeness=None)
 
-    total_story_parts = db.query(BookPart).filter(BookPart.book_id == book_id, BookPart.is_story_part == True).count()
-    extracted_parts = db.query(BookPart).filter(BookPart.book_id == book_id, BookPart.is_story_part == True, BookPart.is_entity_extracted == True).count()
+    story_parts = db.query(BookPart).filter(BookPart.book_id == book_id, BookPart.is_story_part == True)
+    extracted_story_parts = db.query(BookPart).filter(BookPart.book_id == book_id, BookPart.is_story_part == True, BookPart.is_entity_extracted == True)
+    story_parts_total_length = sum([len(part.content) for part in story_parts])
+    extracted_story_parts_total_length = sum([len(part.content) for part in extracted_story_parts])
 
-    completeness = extracted_parts / total_story_parts if total_story_parts > 0 else 0
+    completeness = extracted_story_parts_total_length / story_parts_total_length if story_parts_total_length > 0 else 0
 
-    return BookProcessResponseSchema(book_id=book_id, is_requested=True, estimated_cost=estimated_cost,requested_at=book.extraction_start_time, completeness=completeness)
-
+    return BookProcessResponseSchema(book_id=book_id, is_requested=True, estimated_cost=estimated_cost, requested_at=book.extraction_start_time, completeness=completeness)
