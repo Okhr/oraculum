@@ -19,3 +19,7 @@ export interface BookPartResponseSchema extends BookPartBaseSchema {
     is_entity_extracted: boolean;
     created_at: Date;
 }
+
+export interface BookPartUpdateSchema {
+    is_story_part: boolean;
+}

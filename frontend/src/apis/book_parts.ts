@@ -1,7 +1,7 @@
 import axios from 'axios';
 import useAuthHeader from 'react-auth-kit/hooks/useAuthHeader';
 import globalConfig from "../config.json";
-import { TocBookPartResponseSchema, BookPartResponseSchema } from '../types/book_parts';
+import { TocBookPartResponseSchema, BookPartResponseSchema, BookPartUpdateSchema } from '../types/book_parts';
 
 export const useGetTableOfContent = () => {
     const authHeader = useAuthHeader();
@@ -52,4 +52,22 @@ export const useGetBookParts = () => {
     };
 
     return { getBookParts };
+};
+
+
+export const useUpdateBookPart = () => {
+    const authHeader = useAuthHeader();
+
+    const updateBookPart = async (bookPartId: string, bookPartUpdate: BookPartUpdateSchema): Promise<BookPartUpdateSchema> => {
+        const config = {
+            headers: {
+                'Authorization': authHeader,
+            },
+        };
+        
+        const response = await axios.put<BookPartUpdateSchema>(globalConfig.API_URL + `/book_parts/update/${bookPartId}`, bookPartUpdate, config);
+        return response.data;
+    };
+
+    return { updateBookPart };
 };

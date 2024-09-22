@@ -27,3 +27,7 @@ class BookPartResponseSchema(BookPartBaseSchema):
     is_story_part: bool
     is_entity_extracted: bool
     created_at: datetime
+
+
+class BookPartUpdateSchema(BaseModel):
+    is_story_part: bool

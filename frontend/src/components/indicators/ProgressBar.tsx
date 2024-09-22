@@ -37,10 +37,11 @@ const ProgressBar = ({ title, completeness, startDate }: ProgressBarProps) => {
                 size={"sm"}
                 colorScheme='purple'
                 bg={"gray.100"}
+                mt={2}
                 borderRadius={"2px"}
                 boxShadow={"0 0 4px rgba(0, 0, 0, 0.2)"}
             />
-            <Text fontSize={"sm"} color={"gray.500"} mt={1} display="flex" justifyContent="space-between">
+            <Text fontSize={"sm"} color={"gray.500"} mt={2} display="flex" justifyContent="space-between">
                 <span>Completion: {completenessPercentage.toFixed(1)}%</span>
                 {remainingTimeString && <span>{remainingTimeString}</span>}
             </Text>
