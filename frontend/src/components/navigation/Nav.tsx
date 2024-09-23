@@ -1,5 +1,5 @@
 import { Box, Button, Image, VStack, Spacer, Link, Center, Icon } from '@chakra-ui/react'
-import { FaCog, FaGhost, FaMountain } from 'react-icons/fa';
+import { FaCog, FaGhost } from 'react-icons/fa';
 import { IoLibrary } from 'react-icons/io5';
 
 type NavProps = {
@@ -36,38 +36,21 @@ const Nav = ({ activeLink }: NavProps) => {
         </Button>
         <Box height="1px" width="100%" bg="gray.400" my={4} />
         <Button
-          key={"/characters"}
+          key={"/entities"}
           as={Link}
-          href={"/characters"}
+          href={"/entities"}
           size="sm"
           width="100%"
-          color={activeLink === "Characters" ? "white" : "gray.700"}
-          bg={activeLink === "Characters" ? "purple.400" : "transparent"}
+          color={activeLink === "Entities" ? "white" : "gray.700"}
+          bg={activeLink === "Entities" ? "purple.400" : "transparent"}
           _hover={{
-            bg: activeLink === "Characters" ? "purple.400" : "purple.100",
+            bg: activeLink === "Entities" ? "purple.400" : "purple.100",
             textDecoration: 'none'
           }}
           borderRadius={4}
           leftIcon={<Icon as={FaGhost} />}
         >
-          {"Characters"}
-        </Button>
-        <Button
-          key={"/locations"}
-          as={Link}
-          href={"/locations"}
-          size="sm"
-          width="100%"
-          color={activeLink === "Locations" ? "white" : "gray.700"}
-          bg={activeLink === "Locations" ? "purple.400" : "transparent"}
-          _hover={{
-            bg: activeLink === "Locations" ? "purple.400" : "purple.100",
-            textDecoration: 'none'
-          }}
-          borderRadius={4}
-          leftIcon={<Icon as={FaMountain} />}
-        >
-          {"Locations"}
+          {"Entities"}
         </Button>
         <Spacer />
         <Button

@@ -42,7 +42,7 @@ const Entities = () => {
   }, []);
 
   const toggleIsStoryPart = (bookPartId: string) => {
-    const currentState = bookParts?.find(part => part.id === bookPartId)?.is_story_part;
+    const currentState = tocBookParts?.find(part => part.id === bookPartId)?.is_story_part;
     const updatedState = !currentState;
     updateMutation.mutate({ bookPartId, bookPartUpdate: { is_story_part: updatedState } });
   };
@@ -53,7 +53,7 @@ const Entities = () => {
     refetchInterval: 3000,
   });
 
-  const { data: bookParts, isLoading: isLoadingBookParts } = useQuery({
+  const { data: tocBookParts, isLoading: isLoadingBookParts } = useQuery({
     queryKey: ['bookParts', selectedBookId],
     queryFn: () => selectedBookId ? getTableOfContent(selectedBookId) : null,
     enabled: !!selectedBookId,
@@ -108,7 +108,7 @@ const Entities = () => {
 
   return (
     <Box display="flex" flexDirection={{ base: "column", md: "row" }} height="100vh">
-      {isLargerThan768 ? <Nav activeLink="Characters" /> : <MobileNav activeLink="Characters" />}
+      {isLargerThan768 ? <Nav activeLink="Entities" /> : <MobileNav activeLink="Entities" />}
       <Box flex="1" p={4} mt={isLargerThan768 ? 0 : 20} bg="gray.100" height="100vh" overflowY="auto">
         <Box maxW={{ base: "100%", md: "5xl" }} mx="auto">
           {userBooks && userBooks.length > 0 ? (
@@ -180,7 +180,7 @@ const Entities = () => {
                                   boxShadow="0 0 5px rgba(0, 0, 0, 0.2)" // Added inside box shadow
                                 >
                                   <TableOfContent
-                                    bookParts={bookParts ? bookParts : []}
+                                    bookParts={tocBookParts ? tocBookParts : []}
                                     bookPartsContent={bookPartsContent ? bookPartsContent : new Map<string, string>()}
                                     onTocEntryClick={toggleIsStoryPart}
                                   />

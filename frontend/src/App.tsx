@@ -42,15 +42,7 @@ function App() {
                 }
               />
               <Route
-                path="/characters"
-                element={
-                  <RequireAuth fallbackPath={"/login"}>
-                    <Entities />
-                  </RequireAuth>
-                }
-              />
-              <Route
-                path="/locations"
+                path="/entities"
                 element={
                   <RequireAuth fallbackPath={"/login"}>
                     <Entities />

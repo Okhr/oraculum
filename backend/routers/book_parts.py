@@ -132,8 +132,6 @@ async def update_book_part(
     db.commit()
     db.refresh(book_part)
 
-    print(book_part.is_story_part)
-
     return BookPartResponseSchema(
         id=book_part.id,
         book_id=book_part.book_id,
