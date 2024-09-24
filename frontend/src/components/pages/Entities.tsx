@@ -4,7 +4,7 @@ import { RiCopperCoinFill } from "react-icons/ri";
 import Nav from '../navigation/Nav';
 import MobileNav from '../navigation/MobileNav';
 import { useGetUserBooks } from '../../apis/books';
-import { useGetBookParts, useGetTableOfContent, useUpdateBookPart } from '../../apis/book_parts';
+import { useGetBookParts, useGetBookParts, useUpdateBookPart } from '../../apis/book_parts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import BookSelector from '../state/BookSelector';
 import { useGetEntityExtractionProcess, useTriggerExtraction } from '../../apis/book_processes';
@@ -19,7 +19,7 @@ const Entities = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const { getUserBooks } = useGetUserBooks();
-  const { getTableOfContent } = useGetTableOfContent();
+  const { getTableOfContent } = useGetBookParts();
   const { getBookParts } = useGetBookParts();
   const { getBookEntities } = useGetBookEntities();
   const { triggerExtraction } = useTriggerExtraction();
