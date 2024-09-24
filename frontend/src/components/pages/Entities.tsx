@@ -98,30 +98,42 @@ const Entities = () => {
               <Heading size="lg" color={"gray.700"}>Current Book</Heading>
               <BookSelector userBooks={userBooks} />
               {selectedBookId ? (
-                <Box mt={4} bg="white" borderRadius={8} p={4} textAlign="center">
+                <Box mt={4}>
                   {entityExtractionProcess && (
                     entityExtractionProcess.is_requested && entityExtractionProcess.completeness !== undefined && entityExtractionProcess.requested_at ? (
                       entityExtractionProcess.completeness === 1.0 ? (
                         bookEntities && bookEntities.length > 0 && (
-                          <Box mt={4}>
-                            {bookEntities.map((entity) => (
-                              <Box key={`${entity.name}-${entity.category}`} borderWidth="1px" borderRadius="lg" overflow="hidden" p={4} mb={4}>
-                                <Heading size="md" color={"gray.700"}>{entity.name}</Heading>
-                                <Text mt={2} color={"gray.700"}><strong>Alternative Names:</strong> {entity.alternative_names.join(', ')}</Text>
-                                <Text mt={2} color={"gray.700"}><strong>Category:</strong> {entity.category}</Text>
-                                <Text mt={2} color={"gray.700"}><strong>Facts:</strong></Text>
-                                <ul>
-                                  {entity.facts.map((fact, index) => (
-                                    <li key={index}>
-                                      <Text><strong>Book Part ID:</strong> {fact.book_part_id}</Text>
-                                      <Text><strong>Content:</strong> {fact.content}</Text>
-                                      <Text><strong>Sibling Index:</strong> {fact.sibling_index}</Text>
-                                      <Text><strong>Sibling Total:</strong> {fact.sibling_total}</Text>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </Box>
-                            ))}
+                          <Box my={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
+                            {bookEntities
+                              .sort((a, b) => b.facts.length - a.facts.length)
+                              .map((entity) => (
+                                <Box key={`${entity.name}-${entity.category}`} borderRadius={4} bg="white" overflow="hidden" p={4} mb={4}>
+                                  <Heading size="md" color={"gray.700"}>{entity.name}</Heading>
+                                  <Text mt={2} color={"gray.700"}><strong>Alternative Names:</strong> {entity.alternative_names.join(', ')}</Text>
+                                  <Text mt={2} color={"gray.700"}><strong>Category:</strong> {entity.category}</Text>
+                                  <Text mt={2} color={"gray.700"}><strong>Book Parts:</strong></Text>
+                                  <ul>
+                                    {bookParts?.map((bookPart) => {
+                                      const factsForPart = entity.facts.filter(fact => fact.book_part_id === bookPart.id);
+                                      if (factsForPart.length > 0) {
+                                        return (
+                                          <li key={bookPart.id}>
+                                            <Text><strong>{bookPart.label}:</strong></Text>
+                                            <ul>
+                                              {factsForPart.map((fact, index) => (
+                                                <li key={index}>
+                                                  <Text>{fact.content}</Text>
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          </li>
+                                        );
+                                      }
+                                      return null;
+                                    })}
+                                  </ul>
+                                </Box>
+                              ))}
                           </Box>
                         )
                       ) : (

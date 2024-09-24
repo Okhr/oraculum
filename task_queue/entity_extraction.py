@@ -60,7 +60,7 @@ def extract_entities_task(book_id: str):
                     for attempt in range(max_retries):
                         try:
 
-                            MOCK = True
+                            MOCK = False
 
                             if MOCK:
                                 # Mock response for testing purposes
