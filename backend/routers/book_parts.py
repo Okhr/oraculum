@@ -56,6 +56,27 @@ async def get_book_parts(
     if book.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="The book parts do not belong to the current user")
 
+    def sort_book_parts(book_parts, parent_id=None, level=0):
+        result = []
+        parent_book_parts = sorted([bp for bp in book_parts if bp.parent_id == parent_id], key=lambda bp: bp.sibling_index)
+        for bp in parent_book_parts:
+            result.append(BookPartResponseSchema(
+                id=bp.id,
+                book_id=bp.book_id,
+                parent_id=bp.parent_id,
+                label=bp.label,
+                content=bp.content,
+                sibling_index=bp.sibling_index,
+                is_story_part=bp.is_story_part,
+                is_entity_extracted=bp.is_entity_extracted,
+                created_at=bp.created_at,
+                level=level
+            ))
+            result.extend(sort_book_parts(book_parts, bp.id, level + 1))
+        return result
+
+    return sort_book_parts(book_parts)
+
 
 @router.put("/update/{book_part_id}")
 async def update_book_part(
@@ -80,6 +101,12 @@ async def update_book_part(
     db.commit()
     db.refresh(book_part)
 
+    level = 0
+    parent_book_part = db.query(BookPart).filter(BookPart.id == book_part.parent_id).first()
+    while parent_book_part:
+        level += 1
+        parent_book_part = db.query(BookPart).filter(BookPart.id == parent_book_part.parent_id).first()
+
     return BookPartResponseSchema(
         id=book_part.id,
         book_id=book_part.book_id,
@@ -89,5 +116,6 @@ async def update_book_part(
         sibling_index=book_part.sibling_index,
         is_story_part=book_part.is_story_part,
         is_entity_extracted=book_part.is_entity_extracted,
-        created_at=book_part.created_at
+        created_at=book_part.created_at,
+        level=level
     )

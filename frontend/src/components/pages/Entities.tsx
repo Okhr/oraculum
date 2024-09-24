@@ -4,7 +4,7 @@ import { RiCopperCoinFill } from "react-icons/ri";
 import Nav from '../navigation/Nav';
 import MobileNav from '../navigation/MobileNav';
 import { useGetUserBooks } from '../../apis/books';
-import { useGetBookParts, useGetBookParts, useUpdateBookPart } from '../../apis/book_parts';
+import { useGetBookParts, useUpdateBookPart } from '../../apis/book_parts';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import BookSelector from '../state/BookSelector';
 import { useGetEntityExtractionProcess, useTriggerExtraction } from '../../apis/book_processes';
@@ -19,7 +19,6 @@ const Entities = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const { getUserBooks } = useGetUserBooks();
-  const { getTableOfContent } = useGetBookParts();
   const { getBookParts } = useGetBookParts();
   const { getBookEntities } = useGetBookEntities();
   const { triggerExtraction } = useTriggerExtraction();
@@ -41,10 +40,8 @@ const Entities = () => {
     };
   }, []);
 
-  const toggleIsStoryPart = (bookPartId: string) => {
-    const currentState = tocBookParts?.find(part => part.id === bookPartId)?.is_story_part;
-    const updatedState = !currentState;
-    updateMutation.mutate({ bookPartId, bookPartUpdate: { is_story_part: updatedState } });
+  const toggleIsStoryPart = (bookPartId: string, isStoryPart: boolean) => {
+    updateMutation.mutate({ bookPartId, bookPartUpdate: { is_story_part: isStoryPart } });
   };
 
   const { data: userBooks } = useQuery({
@@ -53,32 +50,12 @@ const Entities = () => {
     refetchInterval: 3000,
   });
 
-  const { data: tocBookParts, isLoading: isLoadingBookParts } = useQuery({
+  const { data: bookParts, isLoading: isLoadingBookParts } = useQuery({
     queryKey: ['bookParts', selectedBookId],
-    queryFn: () => selectedBookId ? getTableOfContent(selectedBookId) : null,
-    enabled: !!selectedBookId,
-  });
-
-  const { data: bookPartsContent, isLoading: isLoadingBookPartsContent } = useQuery({
-    queryKey: ['bookPartsContent', selectedBookId],
-    queryFn: () => selectedBookId ? getBookParts(selectedBookId) : null,
-    enabled: !!selectedBookId,
-    select: (data) => {
-      if (data) {
-        return data.reduce((acc, curr) => {
-          const words = curr.content.split(' ');
-          const shortenedContent = words.slice(0, 100).join(' ');
-          acc.set(curr.id, shortenedContent);
-          return acc;
-        }, new Map<string, string>());
-      }
-      return new Map<string, string>();
-    },
-  });
-
-  const { data: bookEntities } = useQuery({
-    queryKey: ['bookEntities', selectedBookId],
-    queryFn: () => selectedBookId ? getBookEntities(selectedBookId) : null,
+    queryFn: () => selectedBookId ? getBookParts(selectedBookId).then(parts => parts.map(part => ({
+      ...part,
+      content: part.content.split(' ').slice(0, 100).join(' ')
+    }))) : null,
     enabled: !!selectedBookId,
   });
 
@@ -87,6 +64,12 @@ const Entities = () => {
     queryFn: () => selectedBookId ? getEntityExtractionProcess(selectedBookId) : null,
     enabled: !!selectedBookId,
     refetchInterval: 1000,
+  });
+
+  const { data: bookEntities } = useQuery({
+    queryKey: ['bookEntities', selectedBookId],
+    queryFn: () => selectedBookId ? getBookEntities(selectedBookId) : null,
+    enabled: !!selectedBookId && entityExtractionProcess?.completeness === 1.0,
   });
 
   const triggerMutation = useMutation({
@@ -102,7 +85,6 @@ const Entities = () => {
     mutationFn: (variables: { bookPartId: string, bookPartUpdate: BookPartUpdateSchema }) => updateBookPart(variables.bookPartId, variables.bookPartUpdate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookParts', selectedBookId] });
-      queryClient.invalidateQueries({ queryKey: ['bookPartsContent', selectedBookId] });
     }
   })
 
@@ -167,7 +149,7 @@ const Entities = () => {
                               <Text px={6}>
                                 Please make sure each part is correctly classified. Entities will be extracted from narrative parts only. Click on the part to toggle its selection.
                               </Text>
-                              {isLoadingBookParts || isLoadingBookPartsContent ?
+                              {isLoadingBookParts ?
                                 <Center><Spinner /></Center> :
                                 <Box
                                   mt={4}
@@ -180,8 +162,7 @@ const Entities = () => {
                                   boxShadow="0 0 5px rgba(0, 0, 0, 0.2)" // Added inside box shadow
                                 >
                                   <TableOfContent
-                                    bookParts={tocBookParts ? tocBookParts : []}
-                                    bookPartsContent={bookPartsContent ? bookPartsContent : new Map<string, string>()}
+                                    bookParts={bookParts ? bookParts : []}
                                     onTocEntryClick={toggleIsStoryPart}
                                   />
                                 </Box>
