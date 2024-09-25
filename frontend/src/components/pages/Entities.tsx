@@ -9,9 +9,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import BookSelector from '../state/BookSelector';
 import { useGetEntityExtractionProcess, useTriggerExtraction } from '../../apis/book_processes';
 import ProgressBar from '../indicators/ProgressBar';
-import TableOfContent from '../navigation/TableOfContent';
+import TableOfContent from '../visualization/TableOfContent';
 import { BookPartUpdateSchema } from '../../types/book_parts';
 import { useGetBookEntities } from '../../apis/entities';
+import EntityVisualizer from '../visualization/EntityVisualizer';
 
 const Entities = () => {
   const [isLargerThan768] = useMediaQuery('(min-width: 768px)');
@@ -103,54 +104,30 @@ const Entities = () => {
                     entityExtractionProcess.is_requested && entityExtractionProcess.completeness !== undefined && entityExtractionProcess.requested_at ? (
                       entityExtractionProcess.completeness === 1.0 ? (
                         bookEntities && bookEntities.length > 0 && (
-                          <Box my={4} display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
-                            {bookEntities
-                              .sort((a, b) => b.facts.length - a.facts.length)
-                              .map((entity) => (
-                                <Box key={`${entity.name}-${entity.category}`} borderRadius={4} bg="white" overflow="hidden" p={4} mb={4}>
-                                  <Heading size="md" color={"gray.700"}>{entity.name}</Heading>
-                                  <Text mt={2} color={"gray.700"}><strong>Alternative Names:</strong> {entity.alternative_names.join(', ')}</Text>
-                                  <Text mt={2} color={"gray.700"}><strong>Category:</strong> {entity.category}</Text>
-                                  <Text mt={2} color={"gray.700"}><strong>Book Parts:</strong></Text>
-                                  <ul>
-                                    {bookParts?.map((bookPart) => {
-                                      const factsForPart = entity.facts.filter(fact => fact.book_part_id === bookPart.id);
-                                      if (factsForPart.length > 0) {
-                                        return (
-                                          <li key={bookPart.id}>
-                                            <Text><strong>{bookPart.label}:</strong></Text>
-                                            <ul>
-                                              {factsForPart.map((fact, index) => (
-                                                <li key={index}>
-                                                  <Text>{fact.content}</Text>
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          </li>
-                                        );
-                                      }
-                                      return null;
-                                    })}
-                                  </ul>
-                                </Box>
-                              ))}
-                          </Box>
+                          <>
+                            <Heading size="lg" color={"gray.700"} mt={4}>
+                              Entities  </Heading>
+                            <EntityVisualizer entities={bookEntities} />
+                          </>
                         )
                       ) : (
                         <ProgressBar title="The oracle is reading your book..." completeness={entityExtractionProcess.completeness} startDate={new Date(entityExtractionProcess.requested_at)}></ProgressBar>
                       )
                     ) : (
-                      <Box>
-                        <Text fontSize='md' color={"gray.700"}>
+                      <Box bg={"white"} p={4} borderRadius={4} mt={4} boxShadow={"md"} border="1px" borderColor="gray.300">
+                        <Text fontSize='md' color={"gray.700"} textAlign="left">
                           Click the button below to extract characters, locations, organizations and concepts from your book.
                         </Text>
-                        <Button
-                          colorScheme="purple"
-                          onClick={onOpen}
-                          mt={2}
-                        >
-                          Extract entities ({Math.round(entityExtractionProcess.estimated_cost)} <RiCopperCoinFill style={{ "marginLeft": "2px" }} color='#FFD700' />)
-                        </Button>
+                        <Center>
+                          <Button
+                            colorScheme="purple"
+                            onClick={onOpen}
+                            mt={2}
+                          >
+
+                            Extract entities ({Math.round(entityExtractionProcess.estimated_cost)} <RiCopperCoinFill style={{ "marginLeft": "2px" }} color='#FFD700' />)
+                          </Button>
+                        </Center>
 
                         <Modal isOpen={isOpen} onClose={onClose} isCentered size={"lg"}>
                           <ModalOverlay />
@@ -171,7 +148,7 @@ const Entities = () => {
                                   pb={1}
                                   maxHeight={"calc(90vh - 220px)"}
                                   overflowY="auto"
-                                  boxShadow="0 0 5px rgba(0, 0, 0, 0.2)" // Added inside box shadow
+                                  boxShadow="0 0 5px rgba(0, 0, 0, 0.2)"
                                 >
                                   <TableOfContent
                                     bookParts={bookParts ? bookParts : []}
@@ -212,7 +189,7 @@ const Entities = () => {
           )}
         </Box>
       </Box>
-    </Box>
+    </Box >
   );
 };
 
