@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from backend.models.kb_entries import KnowledgeBaseEntry
 from core.parsing import extract_book_metadata, get_cover_image_as_base64
-from task_queue.entity_extraction import extract_entities_task
 from task_queue.parsing import extract_book_parts_task
 
 from backend.schemas import books as book_schemas

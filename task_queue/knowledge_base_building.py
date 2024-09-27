@@ -17,7 +17,7 @@ from backend.models.kb_entries import KnowledgeBaseEntry
 
 
 @dramatiq.actor(max_retries=0, time_limit=60*60*1000)
-def extract_entities_task(book_id: str):
+def build_knowledge_base(book_id: str):
     load_dotenv()
 
     client = OpenAI(

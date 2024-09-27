@@ -2,7 +2,7 @@ import os
 from dramatiq.brokers.redis import RedisBroker
 from dotenv import load_dotenv
 from task_queue.parsing import extract_book_parts_task
-from task_queue.entity_extraction import extract_entities_task
+from task_queue.knowledge_base_building import build_knowledge_base
 
 load_dotenv()
 
