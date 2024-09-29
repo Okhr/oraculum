@@ -1,12 +1,10 @@
 import json
 import os
-from pprint import pp
 import re
 import time
 from dotenv import load_dotenv
-import dramatiq
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from openai import OpenAI
+from langfuse.openai import OpenAI
 from tqdm import tqdm
 
 from backend.database import SessionLocal
@@ -16,12 +14,12 @@ from backend.models.book_parts import BookPart
 from backend.models.kb_entries import KnowledgeBaseEntry
 
 
-@dramatiq.actor(max_retries=0, time_limit=60*60*1000)
 def build_knowledge_base(book_id: str):
+    print(f'[Starting knowledge building task] book_id : {book_id}')
     load_dotenv()
 
     client = OpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY")
+        # api_key=os.environ.get("OPENAI_API_KEY")
     )
 
     with open(f'core/prompts/fr.json', 'r') as f:
@@ -37,12 +35,12 @@ def build_knowledge_base(book_id: str):
         for book_part in sorted_book_parts:
             if book_part.is_story_part and not book_part.is_entity_extracted:
                 print(f"Extracting entities for book part : {book_part.label}")
-                content = re.sub(r'\n{4,}', '\n\n\n', book_part.content)
 
                 # split content into sub parts
+                content = re.sub(r'\n{4,}', '\n\n\n', book_part.content)
                 text_splitter = RecursiveCharacterTextSplitter(
-                    chunk_size=10000,
-                    chunk_overlap=0,
+                    chunk_size=int(os.environ.get("CHUNK_SIZE")),
+                    chunk_overlap=int(os.environ.get("CHUNK_OVERLAP")),
                     length_function=len,
                     separators=["\n\n\n", "\n\n", "\n", ".", ",", " ", ""],
                     keep_separator=True,
@@ -56,47 +54,39 @@ def build_knowledge_base(book_id: str):
                     kb_str = format_knowledge_base_entities(merged_kb)
                     computed_prompt = entity_summarization_with_kb_prompt["prompt"].format(knowledge_base=kb_str, text_part=sub_part)
 
-                    max_retries = 3
-                    for attempt in range(max_retries):
-                        try:
+                    MOCK = False
 
-                            MOCK = False
+                    if MOCK:
+                        # Mock response for testing purposes
+                        time.sleep(0.2)  # Simulate a delay
+                        json_output = [
+                            {
+                                "entity": "Entity 1",
+                                "alternative_names": ["Alt Name 1", "Alt Name 2"],
+                                "referenced_entity": "Referenced Entity 1",
+                                "category": "Category 1",
+                                "summary": "Summary of Entity 1"
+                            },
+                            {
+                                "entity": "Entity 2",
+                                "alternative_names": ["Alt Name 3", "Alt Name 4"],
+                                "referenced_entity": "Referenced Entity 2",
+                                "category": "Category 2",
+                                "summary": "Summary of Entity 2"
 
-                            if MOCK:
-                                # Mock response for testing purposes
-                                time.sleep(0.2)  # Simulate a delay
-                                json_output = [
-                                    {
-                                        "entity": "Entity 1",
-                                        "alternative_names": ["Alt Name 1", "Alt Name 2"],
-                                        "referenced_entity": "Referenced Entity 1",
-                                        "category": "Category 1",
-                                        "summary": "Summary of Entity 1"
-                                    },
-                                    {
-                                        "entity": "Entity 2",
-                                        "alternative_names": ["Alt Name 3", "Alt Name 4"],
-                                        "referenced_entity": "Referenced Entity 2",
-                                        "category": "Category 2",
-                                        "summary": "Summary of Entity 2"
-                                    }
-                                ]
-                            else:
-                                completion = client.chat.completions.create(
-                                    model="gpt-4o-mini",
-                                    messages=[
-                                        {"role": "user", "content": computed_prompt}
-                                    ]
-                                )
-                                json_output = parse_json_output(completion.choices[0].message.content)
-
-                            break
-
-                        except Exception as e:
-                            print(f"Attempt {attempt + 1} failed. Retrying...")
-                            if attempt == max_retries - 1:
-                                print(f"Max retries exceeded. Failed to get a response. Error: {e}")
-                                raise
+                            }
+                        ]
+                    else:
+                        start_time = time.time()
+                        completion = client.chat.completions.create(
+                            model="gpt-4o-mini",
+                            messages=[
+                                {"role": "user", "content": computed_prompt}
+                            ]
+                        )
+                        end_time = time.time()
+                        print(f"Response time: {round(end_time - start_time, 2)}s")
+                        json_output = parse_json_output(completion.choices[0].message.content)
 
                     for entry in json_output:
                         new_entry = KnowledgeBaseEntry(

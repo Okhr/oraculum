@@ -1,11 +1,11 @@
 from logging.config import fileConfig
+import os
 
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-
-from backend.config import settings
 
 from backend.database import Base
 from backend.models.books import Book
@@ -17,8 +17,8 @@ from backend.models.kb_entries import KnowledgeBaseEntry
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_main_option('sqlalchemy.url', f'postgresql+psycopg2://{settings.POSTGRES_USER}@{settings.POSTGRES_HOST}:{settings.DATABASE_PORT}/{settings.POSTGRES_DB}')
-
+load_dotenv()
+config.set_main_option('sqlalchemy.url', f'postgresql+psycopg2://{os.getenv("POSTGRES_USER")}@{os.getenv("POSTGRES_HOST")}:{os.getenv("DATABASE_PORT")}/{os.getenv("POSTGRES_DB")}')
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:

@@ -29,7 +29,7 @@ export const useGetEntityExtractionProcess = () => {
             },
         };
 
-        const response = await axios.get<BookProcessResponseSchema>(globalConfig.API_URL + `/processes/entity_extraction/${bookId}`, config);
+        const response = await axios.get<BookProcessResponseSchema>(globalConfig.API_URL + `/processes/extraction/${bookId}`, config);
         return response.data;
     };
 

@@ -16,4 +16,5 @@ class BookPart(Base):
     sibling_index = Column(Integer, nullable=False)
     is_story_part = Column(Boolean, nullable=False, server_default=text("true"))
     is_entity_extracted = Column(Boolean, nullable=False, server_default=text("false"))
+    sub_parts_count = Column(Integer, nullable=False, server_default=text("1"))
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))

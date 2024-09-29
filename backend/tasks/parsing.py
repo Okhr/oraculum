@@ -1,7 +1,9 @@
 import io
+import os
+from dotenv import load_dotenv
 from ebooklib import epub
 import re
-import dramatiq
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from backend.database import SessionLocal
 from backend.models.users import User
 from backend.models.books import Book
@@ -12,8 +14,10 @@ EXCLUDE_LABELS = [r'^couverture$', r'^titre$', r'^avant-propos', r'^préface', r
                   r'^remerciements$', r'^copyright$', r'^droit d(’|\')auteur$', r'^dans la même collection$', r'^table des matières$', r'^note de l(’|\')auteure*$', r'^quatrième de couverture$']
 
 
-@dramatiq.actor(max_retries=0, time_limit=60*60*1000)
 def extract_book_parts_task(book_id: str):
+    print(f'[Starting extraction task] book_id : {book_id}')
+    load_dotenv()
+
     db = SessionLocal()
 
     book_file = db.query(Book).filter(Book.id == book_id).first()
@@ -41,6 +45,18 @@ def extract_book_parts_task(book_id: str):
             ).first()
 
             if not existing_book_part:
+                # Compute the number of sub parts
+                node_content = re.sub(r'\n{4,}', '\n\n\n', node['content'])
+                text_splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=int(os.environ.get("CHUNK_SIZE")),
+                    chunk_overlap=int(os.environ.get("CHUNK_OVERLAP")),
+                    length_function=len,
+                    separators=["\n\n\n", "\n\n", "\n", ".", ",", " ", ""],
+                    keep_separator=True,
+                )
+
+                sub_parts = text_splitter.split_text(node_content)
+
                 book_part = BookPart(
                     book_id=book_id,
                     parent_id=parent_id,
@@ -49,6 +65,7 @@ def extract_book_parts_task(book_id: str):
                     content=node['content'],
                     sibling_index=sibling_index,
                     is_story_part=is_story_part,
+                    sub_parts_count=len(sub_parts)
                 )
 
                 db.add(book_part)

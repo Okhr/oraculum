@@ -1,19 +1,17 @@
 import math
 from backend.models.book_parts import BookPart
-from sqlalchemy.sql import func
-from sqlalchemy.orm import joinedload
 from typing import Annotated
 from backend.models.users import User
 from backend.schemas.processes import BookProcessResponseSchema
 from backend.schemas.users import UserResponseSchema
-from task_queue.knowledge_base_building import build_knowledge_base
+from backend.tasks.knowledge_base_building import build_knowledge_base
 from backend.routers import auth
 from backend.models.books import Book
 from backend.database import get_db
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi import APIRouter
 
 
@@ -29,7 +27,7 @@ def estimate_cost(db: Session, book_id: uuid.UUID):
 
 
 @router.post("/trigger_extraction/{book_id}")
-async def trigger_extraction(book_id: uuid.UUID, current_user: Annotated[UserResponseSchema, Depends(auth.get_current_user)], db: Session = Depends(get_db)):
+async def trigger_extraction(book_id: uuid.UUID, background_tasks: BackgroundTasks, current_user: Annotated[UserResponseSchema, Depends(auth.get_current_user)], db: Session = Depends(get_db)):
     book = db.query(Book).filter(Book.id == book_id).first()
 
     if not book:
@@ -50,12 +48,12 @@ async def trigger_extraction(book_id: uuid.UUID, current_user: Annotated[UserRes
     book.extraction_start_time = datetime.now(timezone.utc)
     db.commit()
 
-    build_knowledge_base.send(book_id=str(book_id))
+    background_tasks.add_task(build_knowledge_base, book_id=str(book_id))
     user.balance -= estimated_cost
     db.commit()
 
 
-@router.get("/entity_extraction/{book_id}")
+@router.get("/extraction/{book_id}")
 async def get_entity_extraction_process(book_id: uuid.UUID, current_user: Annotated[UserResponseSchema, Depends(auth.get_current_user)], db: Session = Depends(get_db)):
     book = db.query(Book).filter(Book.id == book_id).first()
 
@@ -75,6 +73,6 @@ async def get_entity_extraction_process(book_id: uuid.UUID, current_user: Annota
     story_parts_total_length = sum([len(part.content) for part in story_parts])
     extracted_story_parts_total_length = sum([len(part.content) for part in extracted_story_parts])
 
-    completeness = extracted_story_parts_total_length / story_parts_total_length if story_parts_total_length > 0 else 0
+    completeness = extracted_story_parts_total_length / story_parts_total_length if story_parts_total_length > 0 else 1
 
     return BookProcessResponseSchema(book_id=book_id, is_requested=True, estimated_cost=estimated_cost, requested_at=book.extraction_start_time, completeness=completeness)

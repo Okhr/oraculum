@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import os
 from typing import Annotated
 from fastapi import APIRouter, Request, Response, status, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -6,13 +7,12 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError, ExpiredSignatureError
 
-from ..models import users as user_models
+from backend.models import users as user_models
 
-from ..schemas import users as user_schemas
+from backend.schemas import users as user_schemas
 
-from .. import hashing
-from ..database import get_db
-from ..config import settings
+from backend import hashing
+from backend.database import get_db
 
 
 router = APIRouter()
@@ -22,15 +22,15 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=int(settings.ACCESS_TOKEN_EXPIRES_IN))
+    expire = datetime.now(timezone.utc) + timedelta(minutes=int(os.getenv('ACCESS_TOKEN_EXPIRES_IN')))
     to_encode['exp'] = expire
-    return jwt.encode(to_encode, settings.SECRET_KEY, settings.JWT_ALGORITHM)
+    return jwt.encode(to_encode, os.getenv('SECRET_KEY'), os.getenv('JWT_ALGORITHM'))
 
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)) -> user_schemas.UserResponseSchema:
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials", headers={"WWW-Authenticate": "Bearer"})
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=[os.getenv('JWT_ALGORITHM')])
         username = payload.get('sub')
         if username is None:
             raise credentials_exception

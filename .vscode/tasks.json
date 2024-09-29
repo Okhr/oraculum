@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Start backend",
+            "label": "Backend",
             "type": "shell",
             "command": "uvicorn backend.main:app --reload --port 5050",
             "options": {
@@ -18,7 +18,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Start frontend",
+            "label": "Frontend",
             "type": "shell",
             "command": "npm run dev",
             "options": {
@@ -34,9 +34,9 @@
             "problemMatcher": []
         },
         {
-            "label": "Start dramatiq worker",
+            "label": "RQ worker",
             "type": "shell",
-            "command": "dramatiq task_queue.main",
+            "command": "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES rq worker",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -45,7 +45,7 @@
                 "reveal": "always",
                 "focus": false,
                 "panel": "new",
-                "group": "huey"
+                "group": "rq"
             },
             "problemMatcher": []
         },
@@ -54,7 +54,7 @@
             "dependsOn": [
                 "Start backend",
                 "Start frontend",
-                "Start dramatiq worker"
+                "Start RQ worker"
             ],
             "group": {
                 "kind": "build",

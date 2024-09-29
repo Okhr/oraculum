@@ -3,19 +3,15 @@ channels:
   - conda-forge
   - pytorch
 dependencies:
+  - python=3.12.3  # or any version you want to use
   - ebooklib
   - bs4
   - transformers
   - ca-certificates
   - openssl
-  - sentencepiece
   - certifi
   - protobuf
-  - pytorch
-  - torchvision
-  - torchaudio
   - python-dotenv
-  - google-cloud-language
   - jupyter
   - openai
   - langchain
@@ -27,6 +23,6 @@ dependencies:
   - psycopg2
   - passlib
   - alembic
+  - rq
   - pip:
-    - weaviate-client
-    - dramatiq[redis]
+    - langfuse

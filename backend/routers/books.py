@@ -4,13 +4,13 @@ import os
 from typing import Annotated
 import uuid
 import dotenv
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
 from ebooklib import epub
 from sqlalchemy.orm import Session
 
 from backend.models.kb_entries import KnowledgeBaseEntry
 from core.parsing import extract_book_metadata, get_cover_image_as_base64
-from task_queue.parsing import extract_book_parts_task
+from backend.tasks.parsing import extract_book_parts_task
 
 from backend.schemas import books as book_schemas
 from backend.schemas import users as user_schemas
@@ -27,6 +27,7 @@ router = APIRouter()
 @router.post("/upload/")
 async def create_upload_file(
         uploaded_file: UploadFile,
+        background_tasks: BackgroundTasks,
         current_user: Annotated[user_schemas.UserResponseSchema, Depends(auth.get_current_user)],
         db: Session = Depends(get_db)
 ) -> book_schemas.BookUploadResponseSchema:
@@ -71,7 +72,7 @@ async def create_upload_file(
     db.refresh(new_book_file)
 
     # Add a task to parse and extract book text_parts
-    extract_book_parts_task.send(book_id=str(new_book_file.id))
+    background_tasks.add_task(extract_book_parts_task, book_id=str(new_book_file.id))
 
     return book_schemas.BookUploadResponseSchema(
         id=new_book_file.id,
