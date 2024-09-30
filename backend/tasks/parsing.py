@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from ebooklib import epub
 import re
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langfuse.decorators import langfuse_context, observe
 from backend.database import SessionLocal
 from backend.models.users import User
 from backend.models.books import Book
@@ -13,23 +14,31 @@ from core.parsing import extract_structured_toc
 EXCLUDE_LABELS = [r'^couverture$', r'^titre$', r'^avant-propos', r'^préface', r'^postface', r'^biographie$', r'^bibliographie$', r'^du même auteur$', r'^mentions légales$',
                   r'^remerciements$', r'^copyright$', r'^droit d(’|\')auteur$', r'^dans la même collection$', r'^table des matières$', r'^note de l(’|\')auteure*$', r'^quatrième de couverture$']
 
+load_dotenv()
 
+
+@observe()
 def extract_book_parts_task(book_id: str):
     print(f'[Starting extraction task] book_id : {book_id}')
-    load_dotenv()
 
     db = SessionLocal()
 
-    book_file = db.query(Book).filter(Book.id == book_id).first()
-
-    if book_file:
-        book = epub.read_epub(io.BytesIO(book_file.file_data))
-    else:
-        raise ValueError("Book with the provided ID was not found in the database.")
-
-    content = extract_structured_toc(book)
-
     try:
+        book_file = db.query(Book).filter(Book.id == book_id).first()
+        user = db.query(User).filter(User.id == book_file.user_id).first()
+
+        langfuse_context.update_current_trace(
+            metadata={"book_id": book_id, "book_title": book_file.title, "user_id": user.id, "user_name": user.name},
+            tags=["book_parsing"]
+        )
+
+        if book_file:
+            book = epub.read_epub(io.BytesIO(book_file.file_data))
+        else:
+            raise ValueError("Book with the provided ID was not found in the database.")
+
+        content = extract_structured_toc(book)
+
         def iterate_text_parts(node, sibling_index, parent_id=None):
             # Check the part label to infer if it's part of the story
             is_story_part = not any(re.match(pattern, node['label'], re.IGNORECASE) for pattern in EXCLUDE_LABELS)

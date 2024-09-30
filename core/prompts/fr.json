@@ -1,5 +1,5 @@
 {
-  "summarization_prompt": {
+  "sub_part_summarization_prompt": {
     "prompt": "Je vais te donner un extrait de chapitre de livre entre les balises <TEXT_PART> et </TEXT_PART>. Je veux que tu résumes les actions qui se déroulent dans ce texte. Tu ne fourniras que le résumé, rien d'autre, garde-le bref et factuel.\n<TEXT_PART>\n{text_part}\n</TEXT_PART>",
     "variables": ["text_part"]
   },

@@ -34,27 +34,10 @@
             "problemMatcher": []
         },
         {
-            "label": "RQ worker",
-            "type": "shell",
-            "command": "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES rq worker",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "new",
-                "group": "rq"
-            },
-            "problemMatcher": []
-        },
-        {
             "label": "Start All",
             "dependsOn": [
-                "Start backend",
-                "Start frontend",
-                "Start RQ worker"
+                "Backend",
+                "Frontend"
             ],
             "group": {
                 "kind": "build",
