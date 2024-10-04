@@ -29,7 +29,8 @@ def extract_book_parts_task(book_id: str):
 
         langfuse_context.update_current_trace(
             metadata={"book_id": book_id, "book_title": book_file.title, "user_id": user.id, "user_name": user.name},
-            tags=["book_parsing"]
+            tags=["book_parsing"],
+            user_id=user.name,
         )
 
         if book_file:

@@ -3,10 +3,9 @@ channels:
   - conda-forge
   - pytorch
 dependencies:
-  - python=3.12.3  # or any version you want to use
+  - python=3.12.3
   - ebooklib
   - bs4
-  - transformers
   - ca-certificates
   - openssl
   - certifi
@@ -23,6 +22,5 @@ dependencies:
   - psycopg2
   - passlib
   - alembic
-  - rq
   - pip:
     - langfuse
