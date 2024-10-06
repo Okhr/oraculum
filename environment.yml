@@ -22,5 +22,6 @@ dependencies:
   - psycopg2
   - passlib
   - alembic
+  - networkx
   - pip:
     - langfuse

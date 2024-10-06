@@ -1,3 +1,4 @@
+from collections import Counter
 import json
 import os
 import re
@@ -8,6 +9,7 @@ from langfuse import Langfuse
 from langfuse.decorators import langfuse_context, observe
 from langfuse.openai import OpenAI
 from tqdm import tqdm
+import networkx as nx
 
 from backend.database import SessionLocal
 from backend.models.summaries import Summary
@@ -19,10 +21,6 @@ from backend.models.kb_entries import KnowledgeBaseEntry
 load_dotenv(override=True)
 client = OpenAI()
 languse = Langfuse()
-
-with open(f'core/prompts/fr.json', 'r') as f:
-    data = json.load(f)
-    entity_summarization_with_kb_prompt = data['entity_summarization_with_kb_prompt']
 
 
 @observe()
@@ -78,43 +76,20 @@ def extract_entities_from_sub_parts(book_part: BookPart):
 
     for i, sub_part in enumerate(sub_parts):
         filtered_kb = get_knowledge_base_entries(book_part.book_id, sub_part)
-        merged_kb = merge_knowledge_base_entries(filtered_kb, max_entries_per_name=5)
-        kb_str = format_knowledge_base_entities(merged_kb)        
+        merged_kb = merge_knowledge_base_entries(filtered_kb)
+        kb_str = format_knowledge_base_entities(merged_kb, max_entries_per_name=5)
 
         prompt = languse.get_prompt("sub_part_entity_extraction", label="latest")
         computed_prompt = prompt.compile(knowledge_base=kb_str, text_part=sub_part)
 
-        MOCK = False
-
-        if MOCK:
-            # Mock response for testing purposes
-            time.sleep(0.2)  # Simulate a delay
-            json_output = [
-                {
-                    "entity": "Entity 1",
-                    "alternative_names": ["Alt Name 1", "Alt Name 2"],
-                    "referenced_entity": "Referenced Entity 1",
-                    "category": "Category 1",
-                    "summary": "Summary of Entity 1"
-                },
-                {
-                    "entity": "Entity 2",
-                    "alternative_names": ["Alt Name 3", "Alt Name 4"],
-                    "referenced_entity": "Referenced Entity 2",
-                    "category": "Category 2",
-                    "summary": "Summary of Entity 2"
-
-                }
-            ]
-        else:
-            completion = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "user", "content": computed_prompt}
-                ],
-                response_format={"type": "json_object"}
-            )
-            json_output = json.loads(completion.choices[0].message.content)
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": computed_prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        json_output = json.loads(completion.choices[0].message.content)
 
         for entry in json_output['entities']:
             new_entry = KnowledgeBaseEntry(
@@ -153,20 +128,13 @@ def summarize_sub_parts(book_part: BookPart):
         prompt = languse.get_prompt("sub_part_summarization", label="latest")
         computed_prompt = prompt.compile(text_part=sub_part)
 
-        MOCK = False
-
-        if MOCK:
-            # Mock response for testing purposes
-            time.sleep(0.2)  # Simulate a delay
-            summary = "This is a mock summary for the sub part."
-        else:
-            completion = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "user", "content": computed_prompt}
-                ]
-            )
-            summary = completion.choices[0].message.content.strip()
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": computed_prompt}
+            ]
+        )
+        summary = completion.choices[0].message.content.strip()
 
         new_summary = Summary(
             book_id=book_part.book_id,
@@ -206,7 +174,7 @@ def get_knowledge_base_entries(book_id: str, content: str):
     db = SessionLocal()
     try:
         filtered_kb_entries = []
-        kb_entries = db.query(KnowledgeBaseEntry).filter(KnowledgeBaseEntry.book_id == book_id).all()
+        kb_entries = db.query(KnowledgeBaseEntry).filter(KnowledgeBaseEntry.book_id == book_id).order_by(KnowledgeBaseEntry.created_at).all()
         for kb_entry in kb_entries:
             if (kb_entry.entity_name.strip().lower() in content.lower()
                 or (kb_entry.referenced_entity_name and kb_entry.referenced_entity_name.strip().lower() in content.lower())
@@ -217,41 +185,66 @@ def get_knowledge_base_entries(book_id: str, content: str):
         db.close()
 
 
-def merge_knowledge_base_entries(kb_entries: list[KnowledgeBaseEntry], max_entries_per_name: int = 3):
+def merge_knowledge_base_entries(kb_entries: list[KnowledgeBaseEntry]):
+    G = nx.Graph()
+
+    for i in range(len(kb_entries)):
+        G.add_node(i)
+
+    # Add edges to the graph
+    for i in range(len(kb_entries)):
+        for j in range(i+1, len(kb_entries)):
+            if kb_entries[i].entity_name.strip().lower() == kb_entries[j].entity_name.strip().lower() or (
+                    kb_entries[i].referenced_entity_name and kb_entries[j].referenced_entity_name and kb_entries[i].referenced_entity_name.strip().lower() ==
+                    kb_entries[j].referenced_entity_name.strip().lower()) or (
+                    kb_entries[j].referenced_entity_name and kb_entries[i].entity_name.strip().lower() == kb_entries[j].referenced_entity_name.strip().lower()) or (
+                    kb_entries[i].referenced_entity_name and kb_entries[i].referenced_entity_name.strip().lower() == kb_entries[j].entity_name.strip().lower()):
+                G.add_edge(i, j)
+
+    groups = list(nx.connected_components(G))
+
     merged_kb_entries = {}
 
-    for kb_entry in kb_entries:
-        entity_name = kb_entry.entity_name.strip()
+    for i, group in enumerate(groups):
+        names = [kb_entries[node_index].entity_name for node_index in group]
+        referenced_names = [kb_entries[node_index].referenced_entity_name for node_index in group if kb_entries[node_index].referenced_entity_name]
+        alternative_names = [name.strip() for node_index in group for name in (kb_entries[node_index].alternative_names.split('|') if kb_entries[node_index].alternative_names else [])]
+        categories = [kb_entries[node_index].category for node_index in group]
 
-        if entity_name in merged_kb_entries:
-            merged_kb_entries[entity_name].append(kb_entry)
-            if len(merged_kb_entries[entity_name]) > max_entries_per_name:
-                merged_kb_entries[entity_name] = merged_kb_entries[entity_name][-max_entries_per_name:]
-        else:
-            merged_kb_entries[entity_name] = [kb_entry]
+        most_used_name = Counter(names + referenced_names).most_common(1)[0][0]
+        most_used_category = Counter(categories).most_common(1)[0][0]
+
+        merged_kb_entries[most_used_name] = {
+            "alternative_names": list(set(names + referenced_names + alternative_names) - {most_used_name}),
+            "category": most_used_category,
+            "entries": [kb_entries[node_index] for node_index in group]
+        }
 
     return merged_kb_entries
 
 
-def format_knowledge_base_entities(merged_kb_entries: dict[str, list[KnowledgeBaseEntry]]) -> str:
-    entries_dict = {}
+def format_knowledge_base_entities(merged_kb_entries: dict[str, dict], max_entries_per_name: int = 3) -> str:
+    output_dict = {}
     for k, v in merged_kb_entries.items():
+        output_dict[k] = {
+            "alternative_names": v["alternative_names"],
+            "category": v["category"]
+        }
+
         entries = []
-        for entry in v:
+        for entry in v['entries'][-max_entries_per_name:]:
             # get the associated book_part label
             db = SessionLocal()
             try:
                 book_part_label = db.query(BookPart).filter(BookPart.id == entry.book_part_id).first().label.strip()
             finally:
                 db.close()
-            
-            entries.append({
-            "alternative_names": entry.alternative_names.split("|") if entry.alternative_names else [],
-            "category": entry.category,
-            "fact": entry.fact,
-            "chapter_name": book_part_label,
-            "chapter_sub_part": f"{entry.sibling_index+1}/{entry.sibling_total}"
-        })
-        entries_dict[k] = entries
 
-    return json.dumps(entries_dict, indent=4)
+            entries.append({
+                "fact": entry.fact,
+                "chapter_name": book_part_label,
+                "chapter_sub_part": f"{entry.sibling_index+1}/{entry.sibling_total}"
+            })
+        output_dict[k]["facts"] = entries
+
+    return json.dumps(output_dict, indent=4, ensure_ascii=False).encode('utf8').decode()
