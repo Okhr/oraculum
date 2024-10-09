@@ -47,6 +47,7 @@ def build_knowledge_base(book_id: str):
 
                 extract_entities_from_sub_parts(book_part)
                 summarize_sub_parts(book_part)
+                merge_book_part_entities(book_part)
                 # OTHER EXTRACTIONS
 
                 book_part.is_entity_extracted = True
@@ -76,7 +77,7 @@ def extract_entities_from_sub_parts(book_part: BookPart):
 
     for i, sub_part in enumerate(sub_parts):
         filtered_kb = get_knowledge_base_entries(book_part.book_id, sub_part)
-        merged_kb = merge_knowledge_base_entries(filtered_kb)
+        merged_kb = group_knowledge_base_entries(filtered_kb)
         kb_str = format_knowledge_base_entities(merged_kb, max_entries_per_name=5)
 
         prompt = languse.get_prompt("sub_part_entity_extraction", label="latest")
@@ -147,6 +148,82 @@ def summarize_sub_parts(book_part: BookPart):
         db.commit()
 
 
+def merge_book_part_entities(book_part: BookPart):
+    print(f"[Knowledge building task] Merging entities for book part : {book_part.label}")
+
+    db = SessionLocal()
+
+    # Get all the knowledge base entries for the book part that have a sibling_index and a sibling_total
+    kb_entries = db.query(KnowledgeBaseEntry).filter(
+        KnowledgeBaseEntry.book_part_id == book_part.id,
+        KnowledgeBaseEntry.sibling_index.isnot(None),
+        KnowledgeBaseEntry.sibling_total.isnot(None)
+    ).order_by(KnowledgeBaseEntry.sibling_index).all()
+    # Group the knowledge base entries by entity
+    grouped_kb_entries = group_knowledge_base_entries(kb_entries)
+
+    # For each entity, generate a summary from all the facts
+    for entity_name, entity_data in grouped_kb_entries.items():
+        facts = [entry.fact for entry in entity_data['entries']]
+        facts_str = '\n'.join(facts)
+
+        prompt = languse.get_prompt("entity_merging", label="latest")
+        computed_prompt = prompt.compile(name=entity_name, type=entity_data["category"], facts=facts_str)
+
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": computed_prompt}
+            ]
+        )
+        summary = completion.choices[0].message.content.strip()
+
+
+# ... rest of the code ...
+
+
+def merge_book_part_entities(book_part: BookPart):
+    print(f"[Knowledge building task] Merging entities for book part : {book_part.label}")
+
+    db = SessionLocal()
+
+    # Get all the knowledge base entries for the book part
+    kb_entries = db.query(KnowledgeBaseEntry).filter(KnowledgeBaseEntry.book_part_id == book_part.id).order_by(KnowledgeBaseEntry.sibling_index).all()
+
+    # Group the knowledge base entries by entity
+    grouped_kb_entries = group_knowledge_base_entries(kb_entries)
+
+    # For each entity, generate a summary from all the facts
+    for entity_name, entity_data in grouped_kb_entries.items():
+        facts = [entry.fact for entry in entity_data['entries']]
+        facts_str = '\n'.join(facts)
+
+        prompt = languse.get_prompt("entity_merging", label="latest")
+        computed_prompt = prompt.compile(name=entity_name, type=entity_data["category"], facts=facts_str)
+
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": computed_prompt}
+            ]
+        )
+        summary = completion.choices[0].message.content.strip()
+
+        # Create a new KnowledgeBaseEntry with the merged summary
+        new_entry = KnowledgeBaseEntry(
+            book_id=book_part.book_id,
+            book_part_id=book_part.id,
+            entity_name=entity_name,
+            alternative_names='|'.join(entity_data['alternative_names']) if entity_data.get('alternative_names', []) else None,
+            category=entity_data['category'],
+            fact=summary,
+            sibling_index=None,
+            sibling_total=None
+        )
+        db.add(new_entry)
+        db.commit()
+
+
 def sort_book_parts(book_parts: list[BookPart]):
     sorted_book_parts = []
     root_book_parts = [book_part for book_part in book_parts if book_part.parent_id is None and book_part.is_story_part]
@@ -170,11 +247,22 @@ def sort_book_parts_recursive(book_part: BookPart, book_parts: list[BookPart]):
     return sorted_book_parts
 
 
-def get_knowledge_base_entries(book_id: str, content: str):
+def get_knowledge_base_entries(book_id: str, content: str, sub=True):
     db = SessionLocal()
     try:
         filtered_kb_entries = []
-        kb_entries = db.query(KnowledgeBaseEntry).filter(KnowledgeBaseEntry.book_id == book_id).order_by(KnowledgeBaseEntry.created_at).all()
+        if sub:
+            kb_entries = db.query(KnowledgeBaseEntry).filter(
+                KnowledgeBaseEntry.book_id == book_id,
+                KnowledgeBaseEntry.sibling_index.isnot(None),
+                KnowledgeBaseEntry.sibling_total.isnot(None)
+            ).order_by(KnowledgeBaseEntry.created_at).all()
+        else:
+            kb_entries = db.query(KnowledgeBaseEntry).filter(
+                KnowledgeBaseEntry.book_id == book_id,
+                KnowledgeBaseEntry.sibling_index.is_(None),
+                KnowledgeBaseEntry.sibling_total.is_(None)
+            ).order_by(KnowledgeBaseEntry.created_at).all()
         for kb_entry in kb_entries:
             if (kb_entry.entity_name.strip().lower() in content.lower()
                 or (kb_entry.referenced_entity_name and kb_entry.referenced_entity_name.strip().lower() in content.lower())
@@ -185,7 +273,7 @@ def get_knowledge_base_entries(book_id: str, content: str):
         db.close()
 
 
-def merge_knowledge_base_entries(kb_entries: list[KnowledgeBaseEntry]):
+def group_knowledge_base_entries(kb_entries: list[KnowledgeBaseEntry]):
     G = nx.Graph()
 
     for i in range(len(kb_entries)):
