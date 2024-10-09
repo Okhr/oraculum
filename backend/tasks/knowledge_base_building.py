@@ -46,8 +46,9 @@ def build_knowledge_base(book_id: str):
             if book_part.is_story_part and not book_part.is_entity_extracted:
 
                 extract_entities_from_sub_parts(book_part)
-                summarize_sub_parts(book_part)
+                extract_summaries_from_sub_parts(book_part)
                 merge_book_part_entities(book_part)
+                merge_book_part_summaries(book_part)
                 # OTHER EXTRACTIONS
 
                 book_part.is_entity_extracted = True
@@ -83,14 +84,23 @@ def extract_entities_from_sub_parts(book_part: BookPart):
         prompt = languse.get_prompt("sub_part_entity_extraction", label="latest")
         computed_prompt = prompt.compile(knowledge_base=kb_str, text_part=sub_part)
 
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "user", "content": computed_prompt}
-            ],
-            response_format={"type": "json_object"}
-        )
-        json_output = json.loads(completion.choices[0].message.content)
+        for attempt in range(3):
+            try:
+                completion = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "user", "content": computed_prompt}
+                    ],
+                    response_format={"type": "json_object"}
+                )
+                json_output = json.loads(completion.choices[0].message.content)
+                break
+            except Exception as e:
+                print(f"Attempt {attempt + 1} failed. Error: {str(e)}")
+                if attempt < 2:
+                    time.sleep(2)
+                else:
+                    print("All attempts failed. Please check the prompt or the model.")
 
         for entry in json_output['entities']:
             new_entry = KnowledgeBaseEntry(
@@ -108,7 +118,7 @@ def extract_entities_from_sub_parts(book_part: BookPart):
             db.commit()
 
 
-def summarize_sub_parts(book_part: BookPart):
+def extract_summaries_from_sub_parts(book_part: BookPart):
     print(f"[Knowledge building task] Summarizing sub parts for book part : {book_part.label}")
 
     db = SessionLocal()
@@ -153,44 +163,12 @@ def merge_book_part_entities(book_part: BookPart):
 
     db = SessionLocal()
 
-    # Get all the knowledge base entries for the book part that have a sibling_index and a sibling_total
     kb_entries = db.query(KnowledgeBaseEntry).filter(
         KnowledgeBaseEntry.book_part_id == book_part.id,
         KnowledgeBaseEntry.sibling_index.isnot(None),
         KnowledgeBaseEntry.sibling_total.isnot(None)
     ).order_by(KnowledgeBaseEntry.sibling_index).all()
-    # Group the knowledge base entries by entity
-    grouped_kb_entries = group_knowledge_base_entries(kb_entries)
 
-    # For each entity, generate a summary from all the facts
-    for entity_name, entity_data in grouped_kb_entries.items():
-        facts = [entry.fact for entry in entity_data['entries']]
-        facts_str = '\n'.join(facts)
-
-        prompt = languse.get_prompt("entity_merging", label="latest")
-        computed_prompt = prompt.compile(name=entity_name, type=entity_data["category"], facts=facts_str)
-
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "user", "content": computed_prompt}
-            ]
-        )
-        summary = completion.choices[0].message.content.strip()
-
-
-# ... rest of the code ...
-
-
-def merge_book_part_entities(book_part: BookPart):
-    print(f"[Knowledge building task] Merging entities for book part : {book_part.label}")
-
-    db = SessionLocal()
-
-    # Get all the knowledge base entries for the book part
-    kb_entries = db.query(KnowledgeBaseEntry).filter(KnowledgeBaseEntry.book_part_id == book_part.id).order_by(KnowledgeBaseEntry.sibling_index).all()
-
-    # Group the knowledge base entries by entity
     grouped_kb_entries = group_knowledge_base_entries(kb_entries)
 
     # For each entity, generate a summary from all the facts
@@ -222,6 +200,43 @@ def merge_book_part_entities(book_part: BookPart):
         )
         db.add(new_entry)
         db.commit()
+
+
+def merge_book_part_summaries(book_part: BookPart):
+    print(f"[Knowledge building task] Merging summaries for book part : {book_part.label}")
+
+    db = SessionLocal()
+
+    summaries = db.query(Summary).filter(
+        Summary.book_part_id == book_part.id,
+        Summary.sibling_index.isnot(None),
+        Summary.sibling_total.isnot(None)
+    ).order_by(Summary.sibling_index).all()
+
+    # Merge all the summaries into one
+    summaries = '\n'.join([summary.content for summary in summaries])
+
+    prompt = languse.get_prompt("summary_merging", label="latest")
+    computed_prompt = prompt.compile(summaries=summaries)
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "user", "content": computed_prompt}
+        ]
+    )
+    merged_content = completion.choices[0].message.content.strip()
+
+    # Create a new Summary with the merged content
+    new_summary = Summary(
+        book_id=book_part.book_id,
+        book_part_id=book_part.id,
+        content=merged_content,
+        sibling_index=None,
+        sibling_total=None
+    )
+    db.add(new_summary)
+    db.commit()
 
 
 def sort_book_parts(book_parts: list[BookPart]):
