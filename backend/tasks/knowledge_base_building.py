@@ -45,6 +45,11 @@ def build_knowledge_base(book_id: str):
         for book_part in sorted_book_parts:
             if book_part.is_story_part and not book_part.is_entity_extracted:
 
+                # delete existing entities and summaries from previous runs
+                db.query(KnowledgeBaseEntry).filter(KnowledgeBaseEntry.book_part_id == book_part.id).delete()
+                db.query(Summary).filter(Summary.book_part_id == book_part.id).delete()
+                db.commit()
+
                 extract_entities_from_sub_parts(book_part)
                 extract_summaries_from_sub_parts(book_part)
                 merge_book_part_entities(book_part)
@@ -94,6 +99,22 @@ def extract_entities_from_sub_parts(book_part: BookPart):
                     response_format={"type": "json_object"}
                 )
                 json_output = json.loads(completion.choices[0].message.content)
+                if 'entities' in json_output:
+                    if json_output['entities']:
+                        for entry in json_output['entities']:
+                            new_entry = KnowledgeBaseEntry(
+                                book_id=book_part.book_id,
+                                book_part_id=book_part.id,
+                                entity_name=entry['entity_name'],
+                                alternative_names='|'.join(entry['alternative_names']) if entry.get('alternative_names', []) else None,
+                                referenced_entity_name=entry.get('referenced_entity') if (entry.get('referenced_entity') and entry['referenced_entity'] != "") else None,
+                                category=entry['category'],
+                                fact=entry['summary'],
+                                sibling_index=i,
+                                sibling_total=len(sub_parts)
+                            )
+                            db.add(new_entry)
+                            db.commit()
                 break
             except Exception as e:
                 print(f"Attempt {attempt + 1} failed. Error: {str(e)}")
@@ -101,21 +122,6 @@ def extract_entities_from_sub_parts(book_part: BookPart):
                     time.sleep(2)
                 else:
                     print("All attempts failed. Please check the prompt or the model.")
-
-        for entry in json_output['entities']:
-            new_entry = KnowledgeBaseEntry(
-                book_id=book_part.book_id,
-                book_part_id=book_part.id,
-                entity_name=entry['entity_name'],
-                alternative_names='|'.join(entry['alternative_names']) if entry.get('alternative_names', []) else None,
-                referenced_entity_name=entry.get('referenced_entity') if (entry.get('referenced_entity') and entry['referenced_entity'] != "") else None,
-                category=entry['category'],
-                fact=entry['summary'],
-                sibling_index=i,
-                sibling_total=len(sub_parts)
-            )
-            db.add(new_entry)
-            db.commit()
 
 
 def extract_summaries_from_sub_parts(book_part: BookPart):
@@ -147,15 +153,16 @@ def extract_summaries_from_sub_parts(book_part: BookPart):
         )
         summary = completion.choices[0].message.content.strip()
 
-        new_summary = Summary(
-            book_id=book_part.book_id,
-            book_part_id=book_part.id,
-            content=summary,
-            sibling_index=i,
-            sibling_total=len(sub_parts)
-        )
-        db.add(new_summary)
-        db.commit()
+        if summary != "":
+            new_summary = Summary(
+                book_id=book_part.book_id,
+                book_part_id=book_part.id,
+                content=summary,
+                sibling_index=i,
+                sibling_total=len(sub_parts)
+            )
+            db.add(new_summary)
+            db.commit()
 
 
 def merge_book_part_entities(book_part: BookPart):
@@ -213,35 +220,36 @@ def merge_book_part_summaries(book_part: BookPart):
         Summary.sibling_total.isnot(None)
     ).order_by(Summary.sibling_index).all()
 
-    # Merge all the summaries into one
-    summaries = '\n'.join([summary.content for summary in summaries])
+    if summaries:
+        # Merge all the summaries into one
+        summaries = '\n'.join([summary.content for summary in summaries])
 
-    prompt = languse.get_prompt("summary_merging", label="latest")
-    computed_prompt = prompt.compile(summaries=summaries)
+        prompt = languse.get_prompt("summary_merging", label="latest")
+        computed_prompt = prompt.compile(summaries=summaries)
 
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "user", "content": computed_prompt}
-        ]
-    )
-    merged_content = completion.choices[0].message.content.strip()
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": computed_prompt}
+            ]
+        )
+        merged_content = completion.choices[0].message.content.strip()
 
-    # Create a new Summary with the merged content
-    new_summary = Summary(
-        book_id=book_part.book_id,
-        book_part_id=book_part.id,
-        content=merged_content,
-        sibling_index=None,
-        sibling_total=None
-    )
-    db.add(new_summary)
-    db.commit()
+        # Create a new Summary with the merged content
+        new_summary = Summary(
+            book_id=book_part.book_id,
+            book_part_id=book_part.id,
+            content=merged_content,
+            sibling_index=None,
+            sibling_total=None
+        )
+        db.add(new_summary)
+        db.commit()
 
 
 def sort_book_parts(book_parts: list[BookPart]):
     sorted_book_parts = []
-    root_book_parts = [book_part for book_part in book_parts if book_part.parent_id is None and book_part.is_story_part]
+    root_book_parts = [book_part for book_part in book_parts if book_part.parent_id is None]
     root_book_parts = sorted(root_book_parts, key=lambda x: x.sibling_index)
 
     for root_book_part in root_book_parts:
@@ -251,13 +259,12 @@ def sort_book_parts(book_parts: list[BookPart]):
 
 
 def sort_book_parts_recursive(book_part: BookPart, book_parts: list[BookPart]):
-    child_book_parts = [child for child in book_parts if child.parent_id == book_part.id and child.is_story_part]
+    child_book_parts = [child for child in book_parts if child.parent_id == book_part.id]
     child_book_parts = sorted(child_book_parts, key=lambda x: x.sibling_index)
     sorted_book_parts = []
 
     for child_book_part in child_book_parts:
         sorted_book_parts.append(child_book_part)
-
         sorted_book_parts.extend(sort_book_parts_recursive(child_book_part, book_parts))
     return sorted_book_parts
 
@@ -266,6 +273,7 @@ def get_knowledge_base_entries(book_id: str, content: str, sub=True):
     db = SessionLocal()
     try:
         filtered_kb_entries = []
+
         if sub:
             kb_entries = db.query(KnowledgeBaseEntry).filter(
                 KnowledgeBaseEntry.book_id == book_id,
@@ -278,6 +286,7 @@ def get_knowledge_base_entries(book_id: str, content: str, sub=True):
                 KnowledgeBaseEntry.sibling_index.is_(None),
                 KnowledgeBaseEntry.sibling_total.is_(None)
             ).order_by(KnowledgeBaseEntry.created_at).all()
+
         for kb_entry in kb_entries:
             if (kb_entry.entity_name.strip().lower() in content.lower()
                 or (kb_entry.referenced_entity_name and kb_entry.referenced_entity_name.strip().lower() in content.lower())
@@ -296,12 +305,21 @@ def group_knowledge_base_entries(kb_entries: list[KnowledgeBaseEntry]):
 
     # Add edges to the graph
     for i in range(len(kb_entries)):
+        name_i = kb_entries[i].entity_name.strip().lower()
+        alt_i = [name.strip().lower() for name in kb_entries[i].alternative_names.split("|")] if kb_entries[i].alternative_names else []
+        ref_i = kb_entries[i].referenced_entity_name.strip().lower() if kb_entries[i].referenced_entity_name else None
+
         for j in range(i+1, len(kb_entries)):
-            if kb_entries[i].entity_name.strip().lower() == kb_entries[j].entity_name.strip().lower() or (
-                    kb_entries[i].referenced_entity_name and kb_entries[j].referenced_entity_name and kb_entries[i].referenced_entity_name.strip().lower() ==
-                    kb_entries[j].referenced_entity_name.strip().lower()) or (
-                    kb_entries[j].referenced_entity_name and kb_entries[i].entity_name.strip().lower() == kb_entries[j].referenced_entity_name.strip().lower()) or (
-                    kb_entries[i].referenced_entity_name and kb_entries[i].referenced_entity_name.strip().lower() == kb_entries[j].entity_name.strip().lower()):
+            name_j = kb_entries[j].entity_name.strip().lower()
+            alt_j = [name.strip().lower() for name in kb_entries[j].alternative_names.split("|")] if kb_entries[j].alternative_names else []
+            ref_j = kb_entries[j].referenced_entity_name.strip().lower() if kb_entries[j].referenced_entity_name else None
+
+            if name_i == name_j or (
+                    ref_i and ref_i == name_j) or (
+                    ref_j and name_i == ref_j) or (
+                    ref_i and ref_j and ref_i == ref_j) or any(
+                    name_i == alt_name for alt_name in alt_j) or any(
+                    name_j == alt_name for alt_name in alt_i):
                 G.add_edge(i, j)
 
     groups = list(nx.connected_components(G))

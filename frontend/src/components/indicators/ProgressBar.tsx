@@ -1,4 +1,5 @@
 import { Progress, Text } from '@chakra-ui/react';
+import { useEffect, useState } from 'react';
 
 interface ProgressBarProps {
     title?: string;
@@ -7,25 +8,24 @@ interface ProgressBarProps {
 }
 
 const ProgressBar = ({ title, completeness, startDate }: ProgressBarProps) => {
-    let remainingTimeString = null
+    const [elapsedTimeString, setElapsedTimeString] = useState<string | null>(null);
 
-    if (startDate) {
-        const now = new Date();
-        const elapsedTime = now.getTime() - startDate.getTime();
-        let remainingTime = ((1 - completeness) / completeness) * elapsedTime;
+    useEffect(() => {
+        const timer = setInterval(() => {
+            if (startDate) {
+                const now = new Date();
+                const elapsedTime = now.getTime() - startDate.getTime();
 
-        // Add a multiplicator factor on the remaining time that is dependant on the percentage
-        const multiplicatorFactor = 1 + (2 - 2 * completeness);
-        remainingTime *= multiplicatorFactor;
+                const elapsedHours = Math.floor(elapsedTime / 3600000);
+                const elapsedMinutes = Math.floor((elapsedTime % 3600000) / 60000);
+                const elapsedSeconds = Math.floor((elapsedTime % 60000) / 1000);
 
-        if (remainingTime !== null && remainingTime !== Infinity && remainingTime > 0) {
-            const hours = Math.floor(remainingTime / 3600000);
-            const minutes = Math.floor((remainingTime % 3600000) / 60000);
-            const seconds = Math.floor((remainingTime % 60000) / 1000);
+                setElapsedTimeString(`${elapsedHours !== 0 ? `${elapsedHours}h ` : ''}${elapsedHours !== 0 || elapsedMinutes !== 0 ? `${elapsedMinutes}m ` : ''}${elapsedSeconds}s`);
+            }
+        }, 1000);
 
-            remainingTimeString = `${hours !== 0 ? `${hours}h ` : ''}${hours !== 0 || minutes !== 0 ? `${minutes}m ` : ''}${seconds}s`;
-        }
-    }
+        return () => clearInterval(timer);
+    }, [completeness, startDate]);
 
     const completenessPercentage = completeness * 100;
 
@@ -43,7 +43,7 @@ const ProgressBar = ({ title, completeness, startDate }: ProgressBarProps) => {
             />
             <Text fontSize={"sm"} color={"gray.500"} mt={2} display="flex" justifyContent="space-between">
                 <span>Completion: {completenessPercentage.toFixed(1)}%</span>
-                {remainingTimeString && <span>{remainingTimeString}</span>}
+                {elapsedTimeString && <span>{elapsedTimeString}</span>}
             </Text>
         </>
     );

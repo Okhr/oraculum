@@ -44,7 +44,10 @@ const EntityVisualizer = ({ entities }: EntityVisualizerProps) => {
                 onChange={e => setSearchTerm(e.target.value)}
             />
             <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
-                {filteredEntities.sort((a, b) => b.facts.length - a.facts.length).map(entity => (
+                {filteredEntities.sort((a, b) =>
+                    b.facts.reduce((sum, fact) => sum + fact.occurrences, 0) -
+                    a.facts.reduce((sum, fact) => sum + fact.occurrences, 0)
+                ).map(entity => (
                     <Box
                         p={4}
                         key={entity.name}
@@ -67,7 +70,7 @@ const EntityVisualizer = ({ entities }: EntityVisualizerProps) => {
                         <Text fontSize="sm" fontStyle="italic">
                             {entity.alternative_names.length > 0 ? entity.alternative_names.map(name => name.charAt(0).toUpperCase() + name.slice(1)).join(', ') : ' '}
                         </Text>
-                        <Text fontSize="sm">Number of Facts: {entity.facts.length}</Text>
+                        <Text fontSize="sm">Total Occurrences: {entity.facts.reduce((sum, fact) => sum + fact.occurrences, 0)}</Text>
                     </Box>
                 ))}
             </Box>

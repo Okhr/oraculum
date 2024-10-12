@@ -8,8 +8,9 @@ CategoryType = Literal['PERSON', 'LOCATION', 'ORGANIZATION', 'CONCEPT']
 class Fact(BaseModel):
     book_part_id: uuid.UUID
     content: str
-    sibling_index: int
-    sibling_total: int
+    occurrences: int
+    sibling_index: int | None
+    sibling_total: int | None
 
 
 class EntityResponseSchema(BaseModel):
